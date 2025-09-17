@@ -116,14 +116,6 @@ The project is configured to use SQLite by default, which is suitable for develo
 - **Django 5.2.6+**: Web framework
 - **Pillow 11.3.0+**: Python Imaging Library for image processing
 
-## 🧪 Testing
-
-Run the test suite:
-
-```bash
-uv run python manage.py test
-```
-
 ## 📚 Additional Resources
 
 - [Django Documentation](https://docs.djangoproject.com/)
@@ -134,4 +126,8 @@ uv run python manage.py test
 
 CS-2340 Team 6
 
-- Kenny
+- Deven (Scrum Master + Frontend Dev )
+- Jahir (Product Owner + Backend Dev)
+- Kenny (Backend Dev)
+- Sayan (Full Stack Dev)
+- Shashwat (Frontend Dev)

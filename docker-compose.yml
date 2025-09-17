@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    container_name: cs2340_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: cs2340_db
+      POSTGRES_USER: cs2340_user
+      POSTGRES_PASSWORD: cs2340_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cs2340_user -d cs2340_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    container_name: cs2340_django
+    restart: unless-stopped
+    command: >
+      sh -c "
+        uv run python manage.py wait_for_db &&
+        uv run python manage.py migrate &&
+        uv run python manage.py runserver 0.0.0.0:8000
+      "
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DEBUG=1
+      - DATABASE_URL=postgresql://cs2340_user:cs2340_password@db:5432/cs2340_db
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+
+volumes:
+  postgres_data:
