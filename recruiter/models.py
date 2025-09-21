@@ -1,5 +1,7 @@
 from django.conf import settings
 from django.db import models
+import uuid
+from account.models import Account
 
 
 class JobPosting(models.Model):
@@ -39,3 +41,12 @@ class JobPosting(models.Model):
         return f"{self.title} ({self.owner.username})"
 
 
+class Recruiter(models.Model):
+    account = models.OneToOneField(
+        primary_key=True,
+        to=Account,
+        on_delete=models.CASCADE,
+        related_name="recruiter",
+    )
+    company = models.CharField(max_length=255, blank=True)
+    position = models.CharField(max_length=200, blank=True)
