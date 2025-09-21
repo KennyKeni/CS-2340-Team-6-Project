@@ -8,3 +8,9 @@ dependencies = [
     "django>=5.2.6",
     "pillow>=11.3.0",
 ]
+
+[dependency-groups]
+dev = [
+    "black>=25.9.0",
+    "django-stubs[compatible-mypy]>=5.2.5",
+]
