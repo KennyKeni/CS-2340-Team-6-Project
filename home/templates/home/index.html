@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Home · DevJobs{% endblock %}
+
+{% block hero %}
+<section class="hero">
+  <div class="container text-center">
+    <h1 class="display-5 fw-semibold mb-2">Welcome to DevJobs</h1>
+    <p class="lead mb-0">Find your next role. Post openings. Track applications.</p>
+    <div class="mt-4">
+      <a href="#" class="btn btn-primary btn-lg">Browse Jobs</a>
+      <a href="#" class="btn btn-outline-light btn-lg ms-2">Post a Job</a>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-md-4">
+    <div class="card card-hover h-100">
+      <div class="card-body">
+        <h5 class="card-title">Create your profile</h5>
+        <p class="card-text text-body-secondary small">Showcase your skills, education, and experience to recruiters.</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card card-hover h-100">
+      <div class="card-body">
+        <h5 class="card-title">Search and apply</h5>
+        <p class="card-text text-body-secondary small">Use filters to find the right fit and apply in one click.</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card card-hover h-100">
+      <div class="card-body">
+        <h5 class="card-title">Track your status</h5>
+        <p class="card-text text-body-secondary small">Stay on top of each application—from Applied to Offer.</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
