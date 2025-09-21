@@ -13,4 +13,6 @@ dependencies = [
 dev = [
     "black>=25.9.0",
     "django-stubs[compatible-mypy]>=5.2.5",
+    "flake8>=7.3.0",
+    "isort>=6.0.1",
 ]

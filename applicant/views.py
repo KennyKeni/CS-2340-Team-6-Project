@@ -1,10 +1,12 @@
-from django.shortcuts import render
-from django.http import JsonResponse
-from django.views.decorators.http import require_http_methods
+from datetime import datetime
+
 from django.core.paginator import Paginator
 from django.db.models import Q
-from applicant.models import Applicant, WorkExperience, Education, Skill, Link
-from datetime import datetime
+from django.http import JsonResponse
+from django.shortcuts import render
+from django.views.decorators.http import require_http_methods
+
+from applicant.models import Applicant, Education, Link, Skill, WorkExperience
 
 
 @require_http_methods(["GET"])

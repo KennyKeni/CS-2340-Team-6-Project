@@ -1,7 +1,8 @@
-from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
+from django import forms
+from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.forms.utils import ErrorList
 from django.utils.safestring import mark_safe
-from django import forms
+
 from account.models import Account, UserType
 from applicant.models import Applicant
 from recruiter.models import Recruiter

@@ -1,8 +1,9 @@
-from django.shortcuts import render
-from django.http import JsonResponse
-from django.views.decorators.http import require_http_methods
 from django.core.paginator import Paginator
 from django.db.models import Q
+from django.http import JsonResponse
+from django.shortcuts import render
+from django.views.decorators.http import require_http_methods
+
 from recruiter.models import Recruiter
 
 

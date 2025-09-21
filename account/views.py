@@ -1,21 +1,20 @@
+import json
+from datetime import datetime
 from typing import cast
+
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
-from django.contrib.auth import login, authenticate, logout
-from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-from django.db import transaction
-import json
-from account.forms import (
-    CustomUserCreationForm,
-    CustomAuthenticationForm,
-    ProfileUpdateForm,
-)
+
+from account.forms import (CustomAuthenticationForm, CustomUserCreationForm,
+                           ProfileUpdateForm)
 from account.models import Account, UserType
-from applicant.models import Applicant, WorkExperience, Education, Skill, Link
+from applicant.models import Applicant, Education, Link, Skill, WorkExperience
 from recruiter.models import Recruiter
-from datetime import datetime
 
 
 # Helper method for anyone that needs it
