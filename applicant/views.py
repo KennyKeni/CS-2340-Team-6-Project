@@ -1,12 +1,13 @@
 from datetime import datetime
 
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db.models import Q, Prefetch
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
 
-from applicant.models import Applicant, Education, Link, Skill, WorkExperience
+from .decorators import applicant_required
+from .models import Applicant, Application, Education, Link, Skill, WorkExperience
 
 
 @require_http_methods(["GET"])
@@ -210,3 +211,26 @@ def applicant_search(request):
         },
         status=200,
     )
+
+
+@applicant_required
+def my_applications(request):
+    apps = (
+        Application.objects
+        .select_related("job")
+        .filter(applicant=request.user)
+        .order_by("-updated_at")
+    )
+    steps = [
+        ("applied", "Applied"),
+        ("review", "Review"),
+        ("interview", "Interview"),
+        ("offer", "Offer"),
+        ("closed", "Closed"),
+    ]
+    context = {
+        "template_data": {"title": "My Applications · DevJobs"},
+        "applications": apps,
+        "steps": steps,
+    }
+    return render(request, "applicant/myapplications.html", context)

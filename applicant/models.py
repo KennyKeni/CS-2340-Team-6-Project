@@ -1,5 +1,6 @@
 import uuid
 
+from django.conf import settings
 from django.db import models
 
 from account.models import Account
@@ -89,3 +90,56 @@ class Link(models.Model):
         max_length=20, choices=PLATFORM_CHOICES, default="other"
     )
     description = models.CharField(max_length=200, blank=True)
+
+
+class ApplicationStatus(models.TextChoices):
+    APPLIED = "applied", "Applied"
+    REVIEW = "review", "Review"
+    INTERVIEW = "interview", "Interview"
+    OFFER = "offer", "Offer"
+    CLOSED = "closed", "Closed"
+
+
+class Application(models.Model):
+    """A job application made by a user (applicant) to a JobPosting."""
+    STATUS_FLOW = [
+        ApplicationStatus.APPLIED,
+        ApplicationStatus.REVIEW,
+        ApplicationStatus.INTERVIEW,
+        ApplicationStatus.OFFER,
+        ApplicationStatus.CLOSED,
+    ]
+
+    applicant = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="applications",
+    )
+    job = models.ForeignKey(
+        "recruiter.JobPosting",
+        on_delete=models.CASCADE,
+        related_name="applications",
+    )
+    status = models.CharField(
+        max_length=16,
+        choices=ApplicationStatus.choices,
+        default=ApplicationStatus.APPLIED,
+    )
+    note = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at"]
+        unique_together = (("applicant", "job"),)  # one application per job per user
+
+    def __str__(self) -> str:
+        return f"{self.applicant.username} → {self.job.title} [{self.get_status_display()}]"
+
+    @property
+    def step(self) -> int:
+        """1-based step position to drive the stepper UI in templates."""
+        for i, s in enumerate(self.STATUS_FLOW, start=1):
+            if self.status == s:
+                return i
+        return 1
