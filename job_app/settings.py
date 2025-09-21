@@ -60,8 +60,7 @@ ROOT_URLCONF = "job_app.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [os.path.join(BASE_DIR,
-                              'job_app/templates')],
+        "DIRS": [os.path.join(BASE_DIR, "job_app/templates")],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -127,4 +126,4 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-AUTH_USER_MODEL = 'account.Account'
+AUTH_USER_MODEL = "account.Account"

@@ -3,6 +3,7 @@ from django.db import models
 
 from account.models import Account
 
+
 class Applicant(models.Model):
     account = models.OneToOneField(
         primary_key=True,
@@ -13,13 +14,12 @@ class Applicant(models.Model):
     headline = models.CharField(max_length=500, blank=True)
 
     # TODO Include fields for resume etc, but files should be managed by an s3 bucket
-    resume = models.CharField(max_length=255, blank=True, null=True) # Link
+    resume = models.CharField(max_length=255, blank=True, null=True)  # Link
+
 
 class WorkExperience(models.Model):
     applicant = models.ForeignKey(
-        Applicant,
-        on_delete=models.CASCADE,
-        related_name="work_experiences"
+        Applicant, on_delete=models.CASCADE, related_name="work_experiences"
     )
     company = models.CharField(max_length=255)
     position = models.CharField(max_length=255)
@@ -30,13 +30,12 @@ class WorkExperience(models.Model):
     location = models.CharField(max_length=255, blank=True)
 
     class Meta:
-        ordering = ['-start_date']
+        ordering = ["-start_date"]
+
 
 class Education(models.Model):
     applicant = models.ForeignKey(
-        Applicant,
-        on_delete=models.CASCADE,
-        related_name="education"
+        Applicant, on_delete=models.CASCADE, related_name="education"
     )
     institution = models.CharField(max_length=255)
     degree = models.CharField(max_length=200)
@@ -47,44 +46,45 @@ class Education(models.Model):
     gpa = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
 
     class Meta:
-        ordering = ['-start_date']
+        ordering = ["-start_date"]
+
 
 class Skill(models.Model):
     PROFICIENCY_CHOICES = [
-        ('beginner', 'Beginner'),
-        ('intermediate', 'Intermediate'),
-        ('advanced', 'Advanced'),
-        ('expert', 'Expert'),
+        ("beginner", "Beginner"),
+        ("intermediate", "Intermediate"),
+        ("advanced", "Advanced"),
+        ("expert", "Expert"),
     ]
 
     applicant = models.ForeignKey(
-        Applicant,
-        on_delete=models.CASCADE,
-        related_name="skills"
+        Applicant, on_delete=models.CASCADE, related_name="skills"
     )
     skill_name = models.CharField(max_length=100)
-    proficiency_level = models.CharField(max_length=20, choices=PROFICIENCY_CHOICES, default='intermediate')
+    proficiency_level = models.CharField(
+        max_length=20, choices=PROFICIENCY_CHOICES, default="intermediate"
+    )
     years_of_experience = models.PositiveIntegerField(null=True, blank=True)
 
     class Meta:
-        unique_together = ['applicant', 'skill_name']
+        unique_together = ["applicant", "skill_name"]
+
 
 class Link(models.Model):
     PLATFORM_CHOICES = [
-        ('linkedin', 'LinkedIn'),
-        ('github', 'GitHub'),
-        ('portfolio', 'Portfolio Website'),
-        ('personal', 'Personal Website'),
-        ('twitter', 'Twitter'),
-        ('other', 'Other'),
+        ("linkedin", "LinkedIn"),
+        ("github", "GitHub"),
+        ("portfolio", "Portfolio Website"),
+        ("personal", "Personal Website"),
+        ("twitter", "Twitter"),
+        ("other", "Other"),
     ]
 
     applicant = models.ForeignKey(
-        Applicant,
-        on_delete=models.CASCADE,
-        related_name="links"
+        Applicant, on_delete=models.CASCADE, related_name="links"
     )
     url = models.URLField()
-    platform = models.CharField(max_length=20, choices=PLATFORM_CHOICES, default='other')
+    platform = models.CharField(
+        max_length=20, choices=PLATFORM_CHOICES, default="other"
+    )
     description = models.CharField(max_length=200, blank=True)
-
