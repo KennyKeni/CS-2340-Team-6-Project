@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Job Search</h1>
+<form method="get">
+    <input type="text" name="title" placeholder="Job Title" value="{{ request.GET.title }}">
+    <input type="text" name="skills" placeholder="Skills (comma separated)" value="{{ request.GET.skills }}">
+    <input type="text" name="location" placeholder="Location" value="{{ request.GET.location }}">
+    <input type="text" name="salary_min" placeholder="Min Salary" value="{{ request.GET.salary_min }}">
+    <input type="text" name="salary_max" placeholder="Max Salary" value="{{ request.GET.salary_max }}">
+    <select name="remote">
+        <option value="">Remote/On-site</option>
+        <option value="remote" {% if request.GET.remote == 'remote' %}selected{% endif %}>Remote</option>
+        <option value="onsite" {% if request.GET.remote == 'onsite' %}selected{% endif %}>On-site</option>
+    </select>
+    <select name="visa">
+        <option value="">Visa Sponsorship</option>
+        <option value="yes" {% if request.GET.visa == 'yes' %}selected{% endif %}>Yes</option>
+        <option value="no" {% if request.GET.visa == 'no' %}selected{% endif %}>No</option>
+    </select>
+    <button type="submit">Search</button>
+</form>
+<hr>
+<h2>Results</h2>
+<ul>
+    {% for job in jobs %}
+    <li>
+        <strong>{{ job.title }}</strong> - {{ job.location }}<br>
+        Skills: {{ job.skills_required }}<br>
+        Salary: {{ job.salary }}<br>
+        Remote: {{ job.remote|yesno:"Yes,No" }}<br>
+        Visa Sponsorship: {{ job.visa_sponsorship|yesno:"Yes,No" }}<br>
+        <em>{{ job.summary }}</em>
+    </li>
+    {% empty %}
+    <li>No jobs found.</li>
+    {% endfor %}
+</ul>
+{% endblock %}
