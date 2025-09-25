@@ -23,6 +23,18 @@
       <div class="card-body">
         <h5 class="card-title">Create your profile</h5>
         <p class="card-text text-body-secondary small">Showcase your skills, education, and experience to recruiters.</p>
+        {% if user.is_authenticated %}
+          {% if user.user_type == 'applicant' %}
+            <div class="d-flex gap-2">
+              <a href="{% url 'applicant:view_profile' %}" class="btn btn-outline-primary btn-sm">View Profile</a>
+              <a href="{% url 'applicant:create_profile' %}" class="btn btn-primary btn-sm">Edit Profile</a>
+            </div>
+          {% else %}
+            <a href="{% url 'home:index' %}" class="btn btn-primary btn-sm">Find Your Job Today!</a>
+          {% endif %}
+        {% else %}
+          <a href="{% url 'account:login' %}" class="btn btn-primary btn-sm">Find Your Job Today!</a>
+        {% endif %}
       </div>
     </div>
   </div>
@@ -31,6 +43,7 @@
       <div class="card-body">
         <h5 class="card-title">Search and apply</h5>
         <p class="card-text text-body-secondary small">Use filters to find the right fit and apply in one click.</p>
+        <a href="{% url 'job:job_listings' %}" class="btn btn-primary btn-sm">Browse Jobs</a>
       </div>
     </div>
   </div>

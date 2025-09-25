@@ -29,6 +29,16 @@ class CustomUserCreationForm(UserCreationForm):
     email = forms.EmailField(
         required=True, widget=forms.EmailInput(attrs={"class": "form-control"})
     )
+    first_name = forms.CharField(
+        max_length=150,
+        required=True,
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+    )
+    last_name = forms.CharField(
+        max_length=150,
+        required=True,
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+    )
     phone_number = forms.CharField(
         max_length=15,
         required=False,
@@ -86,6 +96,8 @@ class CustomUserCreationForm(UserCreationForm):
         fields = (
             "username",
             "email",
+            "first_name",
+            "last_name",
             "user_type",
             "phone_number",
             "street_address",
