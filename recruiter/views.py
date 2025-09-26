@@ -9,6 +9,7 @@ from django.views.decorators.http import require_http_methods
 from .decorators import recruiter_required
 from .forms import JobPostingForm
 from .models import JobPosting, Recruiter
+from applicant.models import Applicant
 
 
 @require_http_methods(["GET"])
@@ -148,3 +149,52 @@ def job_delete(request, pk: int):
     job.delete()
     messages.success(request, "Job posting deleted.")
     return redirect("recruiter:jobs")
+
+@recruiter_required
+@require_http_methods(["GET"])
+def candidate_search(request):
+    qs = (
+        Applicant.objects
+        .select_related("account")
+        .prefetch_related("skills", "links", "work_experiences")
+    )
+
+    q = (request.GET.get("q") or "").strip()
+    skills = (request.GET.get("skills") or "").strip()
+    projects = (request.GET.get("projects") or "").strip()
+    city = (request.GET.get("city") or "").strip()
+    state = (request.GET.get("state") or "").strip()
+    country = (request.GET.get("country") or "").strip()
+
+    if q:
+        qs = qs.filter(
+            Q(account__username__icontains=q) |
+            Q(account__first_name__icontains=q) |
+            Q(account__last_name__icontains=q) |
+            Q(headline__icontains=q)
+        )
+
+    if skills:
+        for term in [s.strip() for s in skills.split(",") if s.strip()]:
+            qs = qs.filter(skills__skill_name__icontains=term)
+
+    if city:
+        qs = qs.filter(account__city__icontains=city)
+    if state:
+        qs = qs.filter(account__state__icontains=state)
+    if country:
+        qs = qs.filter(account__country__icontains=country)
+
+    if projects:
+        qs = qs.filter(
+            Q(links__platform__icontains=projects) |
+            Q(links__description__icontains=projects) |
+            Q(links__url__icontains=projects) |
+            Q(work_experiences__company__icontains=projects) |
+            Q(work_experiences__position__icontains=projects) |
+            Q(work_experiences__description__icontains=projects)
+        )
+
+    candidates = qs.distinct().order_by("account__first_name", "account__last_name", "account__username")
+
+    return render(request, "recruiter/candidate_search.html", {"candidates": candidates})

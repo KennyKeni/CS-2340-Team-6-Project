@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ job.title }} · DevJobs{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+  <div class="row g-3">
+    <div class="col-lg-8">
+      <div class="card card-hover">
+        <div class="card-body">
+          <h1 class="h4 mb-1">{{ job.title }}</h1>
+          <div class="small text-body-secondary mb-3">
+            {% if job.location %}{{ job.location }}{% endif %}
+            {% if job.work_hours %}{% if job.location %} • {% endif %}{{ job.work_hours }}{% endif %}
+          </div>
+
+          {% if job.salary %}
+            <p class="mb-2"><span class="badge text-bg-light border">{{ job.salary }}</span></p>
+          {% endif %}
+
+          {% if job.remote is not None %}
+            <p class="mb-2">
+              {% if job.remote %}<span class="badge text-bg-success">Remote</span>
+              {% else %}<span class="badge text-bg-secondary">On-site</span>{% endif %}
+              {% if job.visa_sponsorship %}<span class="badge text-bg-primary ms-1">Visa</span>{% endif %}
+            </p>
+          {% endif %}
+
+          {% if job.summary %}<p class="mb-2">{{ job.summary }}</p>{% endif %}
+          {% if job.responsibilities %}
+            <h6 class="mt-3">Responsibilities</h6>
+            <pre class="mb-0 small text-body-secondary" style="white-space:pre-wrap">{{ job.responsibilities }}</pre>
+          {% endif %}
+          {% if job.skills_required %}
+            <h6 class="mt-3">Skills</h6>
+            <p class="mb-0 small text-body-secondary">{{ job.skills_required }}</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-body">
+          {% if existing_application %}
+            <h6 class="mb-2">You’ve already applied</h6>
+            {% if existing_application.note %}
+              <p class="small text-body-secondary">Your note:</p>
+              <div class="small border rounded p-2 bg-light">{{ existing_application.note }}</div>
+            {% endif %}
+            <form action="{% url 'job:apply_to_job' job.pk %}" method="post" class="mt-3">
+              {% csrf_token %}
+              {{ form.as_p }}
+              <button class="btn btn-primary w-100" type="submit">Update Note</button>
+            </form>
+          {% else %}
+            <h6 class="mb-2">Apply to this job</h6>
+            <form action="{% url 'job:apply_to_job' job.pk %}" method="post">
+              {% csrf_token %}
+              {{ form.as_p }}
+              <button class="btn btn-primary w-100" type="submit">Apply</button>
+            </form>
+            <p class="small text-body-secondary mt-2 mb-0">We’ll attach this note to your application.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

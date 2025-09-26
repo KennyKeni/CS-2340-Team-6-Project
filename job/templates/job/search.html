@@ -106,7 +106,13 @@
                 <span class="fw-semibold">Skills:</span> {{ job.skills_required }}
               </div>
             {% endif %}
-          </div>
+
+            {# <<< ADD THIS CTA BUTTON HERE >>> #}
+            <a href="{% url 'job:job_detail' job.pk %}"
+               class="btn btn-sm btn-primary mt-3">View &amp; Apply</a>
+            {# <<< END INSERTION >>> #}
+
+          </div> {# .card-body #}
         </div>
       </div>
     {% empty %}
