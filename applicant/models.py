@@ -116,7 +116,7 @@ class Application(models.Model):
         related_name="applications",
     )
     job = models.ForeignKey(
-        "recruiter.JobPosting",
+        "job.JobPosting",
         on_delete=models.CASCADE,
         related_name="applications",
     )
@@ -134,7 +134,7 @@ class Application(models.Model):
         unique_together = (("applicant", "job"),)  # one application per job per user
 
     def __str__(self) -> str:
-        return f"{self.applicant.username} → {self.job.title} [{self.get_status_display()}]"
+        return f"{self.applicant.username} → {self.job.title} [{self.get_status_display()}]" #type: ignore
 
     @property
     def step(self) -> int:

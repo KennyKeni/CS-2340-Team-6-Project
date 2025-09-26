@@ -7,8 +7,9 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods
 
 from .decorators import recruiter_required
-from .forms import JobPostingForm
-from .models import JobPosting, Recruiter
+from job.forms import JobPostingForm
+from job.models import JobPosting
+from .models import Recruiter
 
 
 @require_http_methods(["GET"])
@@ -78,7 +79,7 @@ def recruiter_search(request):
                 "zip_code": account.zip_code,
                 "company": recruiter.company,
                 "position": recruiter.position,
-                "user_type": account.user_type,
+                "user_type": "recruiter",
             }
         )
 

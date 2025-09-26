@@ -1,13 +1,18 @@
 from datetime import datetime
 
+from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Q, Prefetch
 from django.http import JsonResponse
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.views.decorators.http import require_http_methods
+from django.contrib.auth import get_user_model
 
 from .decorators import applicant_required
 from .models import Applicant, Application, Education, Link, Skill, WorkExperience
+from applicant.utils import is_applicant
+
+User = get_user_model()
 
 
 @require_http_methods(["GET"])
@@ -189,7 +194,7 @@ def applicant_search(request):
                 "zip_code": account.zip_code,
                 "headline": applicant.headline,
                 "resume": applicant.resume,
-                "user_type": account.user_type,
+                "user_type": 'applicant' if is_applicant(account) else 'recruiter' if hasattr(account, 'recruiter') else '',
                 "work_experiences": work_experiences,
                 "education": education,
                 "skills": skills,
@@ -234,3 +239,200 @@ def my_applications(request):
         "steps": steps,
     }
     return render(request, "applicant/myapplications.html", context)
+
+
+@login_required
+def create_profile(request):
+    """Create or edit applicant profile"""
+    user = request.user
+
+    # Check if user is an applicant
+    if not is_applicant(user):
+        return redirect('home:index')
+
+    # Get or create applicant profile
+    applicant, created = Applicant.objects.get_or_create(account=user)
+
+    if request.method == 'GET':
+        template_data = {
+            "title": "Create Your Profile · DevJobs",
+            "applicant": applicant,
+            "work_experiences": applicant.work_experiences.all(),
+            "education": applicant.education.all(),
+            "skills": applicant.skills.all(),
+            "links": applicant.links.all(),
+        }
+        return render(request, 'applicant/create_profile.html', {'template_data': template_data})
+
+    if request.method == 'POST':
+        try:
+            # Check if this is a JSON request (AJAX)
+            if request.content_type == 'application/json':
+                import json
+                data = json.loads(request.body)
+
+                # Handle work experiences
+                if 'work_experiences' in data:
+                    applicant.work_experiences.all().delete()
+                    for work_exp in data['work_experiences']:
+                        if work_exp.get('company') and work_exp.get('position'):
+                            WorkExperience.objects.create(
+                                applicant=applicant,
+                                company=work_exp.get('company', ''),
+                                position=work_exp.get('position', ''),
+                                start_date=datetime.strptime(work_exp.get('start_date', ''), '%Y-%m-%d').date() if work_exp.get('start_date') else None,
+                                end_date=datetime.strptime(work_exp.get('end_date', ''), '%Y-%m-%d').date() if work_exp.get('end_date') else None,
+                                is_current=work_exp.get('is_current', False),
+                                description=work_exp.get('description', ''),
+                                location=work_exp.get('location', ''),
+                            )
+                    return JsonResponse({'status': 'success'})
+
+                # Handle education
+                if 'education' in data:
+                    applicant.education.all().delete()
+                    for edu in data['education']:
+                        if edu.get('institution') and edu.get('degree'):
+                            Education.objects.create(
+                                applicant=applicant,
+                                institution=edu.get('institution', ''),
+                                degree=edu.get('degree', ''),
+                                field_of_study=edu.get('field_of_study', ''),
+                                start_date=datetime.strptime(edu.get('start_date', ''), '%Y-%m-%d').date() if edu.get('start_date') else None,
+                                end_date=datetime.strptime(edu.get('end_date', ''), '%Y-%m-%d').date() if edu.get('end_date') else None,
+                                is_current=edu.get('is_current', False),
+                                gpa=float(edu.get('gpa', 0)) if edu.get('gpa') else None,
+                            )
+                    return JsonResponse({'status': 'success'})
+
+                # Handle skills
+                if 'skills' in data:
+                    applicant.skills.all().delete()
+                    for skill in data['skills']:
+                        if skill.get('skill_name'):
+                            Skill.objects.create(
+                                applicant=applicant,
+                                skill_name=skill.get('skill_name', ''),
+                                proficiency_level=skill.get('proficiency_level', 'intermediate'),
+                                years_of_experience=int(skill.get('years_of_experience', 0)) if skill.get('years_of_experience') else None,
+                            )
+                    return JsonResponse({'status': 'success'})
+
+                # Handle links
+                if 'links' in data:
+                    applicant.links.all().delete()
+                    for link in data['links']:
+                        if link.get('url'):
+                            Link.objects.create(
+                                applicant=applicant,
+                                url=link.get('url', ''),
+                                platform=link.get('platform', 'other'),
+                                description=link.get('description', ''),
+                            )
+                    return JsonResponse({'status': 'success'})
+
+                return JsonResponse({'status': 'error', 'message': 'No valid data provided'})
+
+            # Handle regular form submission
+            data = request.POST
+
+            # Update basic profile info
+            applicant.headline = data.get('headline', '')
+            applicant.resume = data.get('resume', '')
+            applicant.save()
+
+            # Handle work experiences
+            if 'work_experiences' in data:
+                applicant.work_experiences.all().delete()
+                work_experiences = data.getlist('work_experiences')
+                for i, work_exp in enumerate(work_experiences):
+                    if work_exp:  # Skip empty entries
+                        WorkExperience.objects.create(
+                            applicant=applicant,
+                            company=data.get(f'work_company_{i}', ''),
+                            position=data.get(f'work_position_{i}', ''),
+                            start_date=datetime.strptime(data.get(f'work_start_{i}', ''), '%Y-%m-%d').date() if data.get(f'work_start_{i}') else None,
+                            end_date=datetime.strptime(data.get(f'work_end_{i}', ''), '%Y-%m-%d').date() if data.get(f'work_end_{i}') else None,
+                            is_current=data.get(f'work_current_{i}') == 'on',
+                            description=data.get(f'work_description_{i}', ''),
+                            location=data.get(f'work_location_{i}', ''),
+                        )
+
+            # Handle education
+            if 'education' in data:
+                applicant.education.all().delete()
+                education = data.getlist('education')
+                for i, edu in enumerate(education):
+                    if edu:  # Skip empty entries
+                        Education.objects.create(
+                            applicant=applicant,
+                            institution=data.get(f'edu_institution_{i}', ''),
+                            degree=data.get(f'edu_degree_{i}', ''),
+                            field_of_study=data.get(f'edu_field_{i}', ''),
+                            start_date=datetime.strptime(data.get(f'edu_start_{i}', ''), '%Y-%m-%d').date() if data.get(f'edu_start_{i}') else None,
+                            end_date=datetime.strptime(data.get(f'edu_end_{i}', ''), '%Y-%m-%d').date() if data.get(f'edu_end_{i}') else None,
+                            is_current=data.get(f'edu_current_{i}') == 'on',
+                            gpa=float(data.get(f'edu_gpa_{i}', 0)) if data.get(f'edu_gpa_{i}') else None,
+                        )
+
+            # Handle skills
+            if 'skills' in data:
+                applicant.skills.all().delete()
+                skills = data.getlist('skills')
+                for i, skill in enumerate(skills):
+                    if skill:  # Skip empty entries
+                        Skill.objects.create(
+                            applicant=applicant,
+                            skill_name=data.get(f'skill_name_{i}', ''),
+                            proficiency_level=data.get(f'skill_level_{i}', 'intermediate'),
+                            years_of_experience=int(data.get(f'skill_years_{i}', 0)) if data.get(f'skill_years_{i}') else None,
+                        )
+
+            # Handle links
+            if 'links' in data:
+                applicant.links.all().delete()
+                links = data.getlist('links')
+                for i, link in enumerate(links):
+                    if link:  # Skip empty entries
+                        Link.objects.create(
+                            applicant=applicant,
+                            url=data.get(f'link_url_{i}', ''),
+                            platform=data.get(f'link_platform_{i}', 'other'),
+                            description=data.get(f'link_description_{i}', ''),
+                        )
+
+            return redirect('applicant:view_profile')
+
+        except Exception as e:
+            # Handle errors
+            template_data = {
+                "title": "Create Your Profile · DevJobs",
+                "applicant": applicant,
+                "error": str(e),
+            }
+            return render(request, 'applicant/create_profile.html', {'template_data': template_data})
+
+
+@login_required
+def view_profile(request):
+    """View applicant profile"""
+    user = request.user
+
+    # Check if user is an applicant
+    if not is_applicant(user):
+        return redirect('home:index')
+
+    try:
+        applicant = user.applicant
+    except Applicant.DoesNotExist:
+        return redirect('applicant:create_profile')
+
+    template_data = {
+        "title": "My Profile · DevJobs",
+        "applicant": applicant,
+        "work_experiences": applicant.work_experiences.all(),
+        "education": applicant.education.all(),
+        "skills": applicant.skills.all(),
+        "links": applicant.links.all(),
+    }
+    return render(request, 'applicant/view_profile.html', {'template_data': template_data})

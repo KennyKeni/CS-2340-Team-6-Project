@@ -1,0 +1,655 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ template_data.title }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card shadow">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <div>
+            <h2 class="fw-bold text-primary mb-1">Create Your Profile</h2>
+            <p class="text-muted mb-0">Showcase your skills and experience to recruiters</p>
+          </div>
+          <div>
+            <a href="{% url 'account:logout' %}" class="btn btn-outline-danger">
+              <i class="bi bi-box-arrow-right"></i> Logout
+            </a>
+          </div>
+        </div>
+
+        {% if template_data.error %}
+        <div class="alert alert-danger" role="alert">
+          {{ template_data.error }}
+        </div>
+        {% endif %}
+
+        <form method="post" id="profileForm">
+          {% csrf_token %}
+          
+          <!-- Basic Information -->
+          <div class="mb-4">
+            <h5 class="fw-semibold mb-3">Basic Information</h5>
+            
+            <div class="mb-3">
+              <label for="headline" class="form-label">Professional Headline</label>
+              <input type="text" class="form-control" id="headline" name="headline" 
+                     value="{{ template_data.applicant.headline }}" 
+                     placeholder="e.g., Software Engineer with 5+ years experience">
+            </div>
+            
+            <div class="mb-3">
+              <label for="resume" class="form-label">Resume Link</label>
+              <input type="url" class="form-control" id="resume" name="resume" 
+                     value="{{ template_data.applicant.resume }}" 
+                     placeholder="https://example.com/resume.pdf">
+            </div>
+          </div>
+
+          <!-- Work Experience -->
+          <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h5 class="fw-semibold mb-0">Work Experience</h5>
+              <button type="button" class="btn btn-outline-primary btn-sm" onclick="addWorkExperience()">
+                <i class="bi bi-plus"></i> Add Experience
+              </button>
+            </div>
+            
+            <div id="workExperienceContainer">
+              {% for exp in template_data.work_experiences %}
+              <div class="work-experience-item border rounded p-3 mb-3">
+                <div class="row">
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label">Company</label>
+                    <input type="text" class="form-control" name="work_company_{{ forloop.counter0 }}" 
+                           value="{{ exp.company }}" placeholder="Company Name">
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label">Position</label>
+                    <input type="text" class="form-control" name="work_position_{{ forloop.counter0 }}" 
+                           value="{{ exp.position }}" placeholder="Job Title">
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-md-3 mb-3">
+                    <label class="form-label">Start Date</label>
+                    <input type="date" class="form-control" name="work_start_{{ forloop.counter0 }}" 
+                           value="{{ exp.start_date|date:'Y-m-d' }}">
+                  </div>
+                  <div class="col-md-3 mb-3">
+                    <label class="form-label">End Date</label>
+                    <input type="date" class="form-control" name="work_end_{{ forloop.counter0 }}" 
+                           value="{{ exp.end_date|date:'Y-m-d' }}">
+                  </div>
+                  <div class="col-md-3 mb-3">
+                    <label class="form-label">Location</label>
+                    <input type="text" class="form-control" name="work_location_{{ forloop.counter0 }}" 
+                           value="{{ exp.location }}" placeholder="City, State">
+                  </div>
+                  <div class="col-md-3 mb-3 d-flex align-items-end">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" name="work_current_{{ forloop.counter0 }}" 
+                             {% if exp.is_current %}checked{% endif %}>
+                      <label class="form-check-label">Current Position</label>
+                    </div>
+                  </div>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Description</label>
+                  <textarea class="form-control" name="work_description_{{ forloop.counter0 }}" 
+                            rows="3" placeholder="Describe your role and achievements">{{ exp.description }}</textarea>
+                </div>
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeWorkExperience(this)">
+                  <i class="bi bi-trash"></i> Remove
+                </button>
+              </div>
+              {% endfor %}
+            </div>
+            <div class="d-flex justify-content-end mb-3">
+              <button type="button" class="btn btn-success btn-sm" onclick="saveWorkExperience()">
+                <i class="bi bi-check"></i> Save Work Experience
+              </button>
+            </div>
+          </div>
+
+          <!-- Education -->
+          <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h5 class="fw-semibold mb-0">Education</h5>
+              <button type="button" class="btn btn-outline-primary btn-sm" onclick="addEducation()">
+                <i class="bi bi-plus"></i> Add Education
+              </button>
+            </div>
+            
+            <div id="educationContainer">
+              {% for edu in template_data.education %}
+              <div class="education-item border rounded p-3 mb-3">
+                <div class="row">
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label">Institution</label>
+                    <input type="text" class="form-control" name="edu_institution_{{ forloop.counter0 }}" 
+                           value="{{ edu.institution }}" placeholder="University Name">
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label">Degree</label>
+                    <input type="text" class="form-control" name="edu_degree_{{ forloop.counter0 }}" 
+                           value="{{ edu.degree }}" placeholder="Bachelor's, Master's, etc.">
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label">Field of Study</label>
+                    <input type="text" class="form-control" name="edu_field_{{ forloop.counter0 }}" 
+                           value="{{ edu.field_of_study }}" placeholder="Computer Science, Engineering, etc.">
+                  </div>
+                  <div class="col-md-3 mb-3">
+                    <label class="form-label">GPA</label>
+                    <input type="number" step="0.01" class="form-control" name="edu_gpa_{{ forloop.counter0 }}" 
+                           value="{{ edu.gpa }}" placeholder="3.5">
+                  </div>
+                  <div class="col-md-3 mb-3 d-flex align-items-end">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" name="edu_current_{{ forloop.counter0 }}" 
+                             {% if edu.is_current %}checked{% endif %}>
+                      <label class="form-check-label">Currently Enrolled</label>
+                    </div>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label">Start Date</label>
+                    <input type="date" class="form-control" name="edu_start_{{ forloop.counter0 }}" 
+                           value="{{ edu.start_date|date:'Y-m-d' }}">
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label">End Date</label>
+                    <input type="date" class="form-control" name="edu_end_{{ forloop.counter0 }}" 
+                           value="{{ edu.end_date|date:'Y-m-d' }}">
+                  </div>
+                </div>
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeEducation(this)">
+                  <i class="bi bi-trash"></i> Remove
+                </button>
+              </div>
+              {% endfor %}
+            </div>
+            <div class="d-flex justify-content-end mb-3">
+              <button type="button" class="btn btn-success btn-sm" onclick="saveEducation()">
+                <i class="bi bi-check"></i> Save Education
+              </button>
+            </div>
+          </div>
+
+          <!-- Skills -->
+          <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h5 class="fw-semibold mb-0">Skills</h5>
+              <button type="button" class="btn btn-outline-primary btn-sm" onclick="addSkill()">
+                <i class="bi bi-plus"></i> Add Skill
+              </button>
+            </div>
+            
+            <div id="skillsContainer">
+              {% for skill in template_data.skills %}
+              <div class="skill-item border rounded p-3 mb-3">
+                <div class="row">
+                  <div class="col-md-4 mb-3">
+                    <label class="form-label">Skill Name</label>
+                    <input type="text" class="form-control" name="skill_name_{{ forloop.counter0 }}" 
+                           value="{{ skill.skill_name }}" placeholder="Python, JavaScript, etc.">
+                  </div>
+                  <div class="col-md-3 mb-3">
+                    <label class="form-label">Proficiency Level</label>
+                    <select class="form-select" name="skill_level_{{ forloop.counter0 }}">
+                      <option value="beginner" {% if skill.proficiency_level == 'beginner' %}selected{% endif %}>Beginner</option>
+                      <option value="intermediate" {% if skill.proficiency_level == 'intermediate' %}selected{% endif %}>Intermediate</option>
+                      <option value="advanced" {% if skill.proficiency_level == 'advanced' %}selected{% endif %}>Advanced</option>
+                      <option value="expert" {% if skill.proficiency_level == 'expert' %}selected{% endif %}>Expert</option>
+                    </select>
+                  </div>
+                  <div class="col-md-3 mb-3">
+                    <label class="form-label">Years of Experience</label>
+                    <input type="number" class="form-control" name="skill_years_{{ forloop.counter0 }}" 
+                           value="{{ skill.years_of_experience }}" placeholder="3">
+                  </div>
+                  <div class="col-md-2 mb-3 d-flex align-items-end">
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeSkill(this)">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+            <div class="d-flex justify-content-end mb-3">
+              <button type="button" class="btn btn-success btn-sm" onclick="saveSkills()">
+                <i class="bi bi-check"></i> Save Skills
+              </button>
+            </div>
+          </div>
+
+          <!-- Links -->
+          <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h5 class="fw-semibold mb-0">Links</h5>
+              <button type="button" class="btn btn-outline-primary btn-sm" onclick="addLink()">
+                <i class="bi bi-plus"></i> Add Link
+              </button>
+            </div>
+            
+            <div id="linksContainer">
+              {% for link in template_data.links %}
+              <div class="link-item border rounded p-3 mb-3">
+                <div class="row">
+                  <div class="col-md-4 mb-3">
+                    <label class="form-label">Platform</label>
+                    <select class="form-select" name="link_platform_{{ forloop.counter0 }}">
+                      <option value="linkedin" {% if link.platform == 'linkedin' %}selected{% endif %}>LinkedIn</option>
+                      <option value="github" {% if link.platform == 'github' %}selected{% endif %}>GitHub</option>
+                      <option value="portfolio" {% if link.platform == 'portfolio' %}selected{% endif %}>Portfolio</option>
+                      <option value="personal" {% if link.platform == 'personal' %}selected{% endif %}>Personal Website</option>
+                      <option value="twitter" {% if link.platform == 'twitter' %}selected{% endif %}>Twitter</option>
+                      <option value="other" {% if link.platform == 'other' %}selected{% endif %}>Other</option>
+                    </select>
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label">URL</label>
+                    <input type="url" class="form-control" name="link_url_{{ forloop.counter0 }}" 
+                           value="{{ link.url }}" placeholder="https://example.com">
+                  </div>
+                  <div class="col-md-2 mb-3 d-flex align-items-end">
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeLink(this)">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Description</label>
+                  <input type="text" class="form-control" name="link_description_{{ forloop.counter0 }}" 
+                         value="{{ link.description }}" placeholder="Brief description">
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+            <div class="d-flex justify-content-end mb-3">
+              <button type="button" class="btn btn-success btn-sm" onclick="saveLinks()">
+                <i class="bi bi-check"></i> Save Links
+              </button>
+            </div>
+          </div>
+
+          <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+            <a href="{% url 'home:index' %}" class="btn btn-outline-secondary me-md-2">Cancel</a>
+            <button type="submit" class="btn btn-primary">Save All Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let workExperienceCount = {{ template_data.work_experiences|length }};
+let educationCount = {{ template_data.education|length }};
+let skillsCount = {{ template_data.skills|length }};
+let linksCount = {{ template_data.links|length }};
+
+function addWorkExperience() {
+  const container = document.getElementById('workExperienceContainer');
+  const item = document.createElement('div');
+  item.className = 'work-experience-item border rounded p-3 mb-3';
+  item.innerHTML = `
+    <div class="row">
+      <div class="col-md-6 mb-3">
+        <label class="form-label">Company</label>
+        <input type="text" class="form-control" name="work_company_${workExperienceCount}" placeholder="Company Name">
+      </div>
+      <div class="col-md-6 mb-3">
+        <label class="form-label">Position</label>
+        <input type="text" class="form-control" name="work_position_${workExperienceCount}" placeholder="Job Title">
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-md-3 mb-3">
+        <label class="form-label">Start Date</label>
+        <input type="date" class="form-control" name="work_start_${workExperienceCount}">
+      </div>
+      <div class="col-md-3 mb-3">
+        <label class="form-label">End Date</label>
+        <input type="date" class="form-control" name="work_end_${workExperienceCount}">
+      </div>
+      <div class="col-md-3 mb-3">
+        <label class="form-label">Location</label>
+        <input type="text" class="form-control" name="work_location_${workExperienceCount}" placeholder="City, State">
+      </div>
+      <div class="col-md-3 mb-3 d-flex align-items-end">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" name="work_current_${workExperienceCount}">
+          <label class="form-check-label">Current Position</label>
+        </div>
+      </div>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Description</label>
+      <textarea class="form-control" name="work_description_${workExperienceCount}" rows="3" placeholder="Describe your role and achievements"></textarea>
+    </div>
+    <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeWorkExperience(this)">
+      <i class="bi bi-trash"></i> Remove
+    </button>
+  `;
+  container.appendChild(item);
+  workExperienceCount++;
+}
+
+function removeWorkExperience(button) {
+  button.closest('.work-experience-item').remove();
+}
+
+function addEducation() {
+  const container = document.getElementById('educationContainer');
+  const item = document.createElement('div');
+  item.className = 'education-item border rounded p-3 mb-3';
+  item.innerHTML = `
+    <div class="row">
+      <div class="col-md-6 mb-3">
+        <label class="form-label">Institution</label>
+        <input type="text" class="form-control" name="edu_institution_${educationCount}" placeholder="University Name">
+      </div>
+      <div class="col-md-6 mb-3">
+        <label class="form-label">Degree</label>
+        <input type="text" class="form-control" name="edu_degree_${educationCount}" placeholder="Bachelor's, Master's, etc.">
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-md-6 mb-3">
+        <label class="form-label">Field of Study</label>
+        <input type="text" class="form-control" name="edu_field_${educationCount}" placeholder="Computer Science, Engineering, etc.">
+      </div>
+      <div class="col-md-3 mb-3">
+        <label class="form-label">GPA</label>
+        <input type="number" step="0.01" class="form-control" name="edu_gpa_${educationCount}" placeholder="3.5">
+      </div>
+      <div class="col-md-3 mb-3 d-flex align-items-end">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" name="edu_current_${educationCount}">
+          <label class="form-check-label">Currently Enrolled</label>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-md-6 mb-3">
+        <label class="form-label">Start Date</label>
+        <input type="date" class="form-control" name="edu_start_${educationCount}">
+      </div>
+      <div class="col-md-6 mb-3">
+        <label class="form-label">End Date</label>
+        <input type="date" class="form-control" name="edu_end_${educationCount}">
+      </div>
+    </div>
+    <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeEducation(this)">
+      <i class="bi bi-trash"></i> Remove
+    </button>
+  `;
+  container.appendChild(item);
+  educationCount++;
+}
+
+function removeEducation(button) {
+  button.closest('.education-item').remove();
+}
+
+function addSkill() {
+  const container = document.getElementById('skillsContainer');
+  const item = document.createElement('div');
+  item.className = 'skill-item border rounded p-3 mb-3';
+  item.innerHTML = `
+    <div class="row">
+      <div class="col-md-4 mb-3">
+        <label class="form-label">Skill Name</label>
+        <input type="text" class="form-control" name="skill_name_${skillsCount}" placeholder="Python, JavaScript, etc.">
+      </div>
+      <div class="col-md-3 mb-3">
+        <label class="form-label">Proficiency Level</label>
+        <select class="form-select" name="skill_level_${skillsCount}">
+          <option value="beginner">Beginner</option>
+          <option value="intermediate" selected>Intermediate</option>
+          <option value="advanced">Advanced</option>
+          <option value="expert">Expert</option>
+        </select>
+      </div>
+      <div class="col-md-3 mb-3">
+        <label class="form-label">Years of Experience</label>
+        <input type="number" class="form-control" name="skill_years_${skillsCount}" placeholder="3">
+      </div>
+      <div class="col-md-2 mb-3 d-flex align-items-end">
+        <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeSkill(this)">
+          <i class="bi bi-trash"></i>
+        </button>
+      </div>
+    </div>
+  `;
+  container.appendChild(item);
+  skillsCount++;
+}
+
+function removeSkill(button) {
+  button.closest('.skill-item').remove();
+}
+
+function addLink() {
+  const container = document.getElementById('linksContainer');
+  const item = document.createElement('div');
+  item.className = 'link-item border rounded p-3 mb-3';
+  item.innerHTML = `
+    <div class="row">
+      <div class="col-md-4 mb-3">
+        <label class="form-label">Platform</label>
+        <select class="form-select" name="link_platform_${linksCount}">
+          <option value="linkedin">LinkedIn</option>
+          <option value="github">GitHub</option>
+          <option value="portfolio">Portfolio</option>
+          <option value="personal">Personal Website</option>
+          <option value="twitter">Twitter</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="col-md-6 mb-3">
+        <label class="form-label">URL</label>
+        <input type="url" class="form-control" name="link_url_${linksCount}" placeholder="https://example.com">
+      </div>
+      <div class="col-md-2 mb-3 d-flex align-items-end">
+        <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeLink(this)">
+          <i class="bi bi-trash"></i>
+        </button>
+      </div>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Description</label>
+      <input type="text" class="form-control" name="link_description_${linksCount}" placeholder="Brief description">
+    </div>
+  `;
+  container.appendChild(item);
+  linksCount++;
+}
+
+function removeLink(button) {
+  button.closest('.link-item').remove();
+}
+
+// Individual save functions
+async function saveWorkExperience() {
+  // Collect work experience data and save via AJAX
+  const workExperiences = [];
+  document.querySelectorAll('.work-experience-item').forEach((item, index) => {
+    const company = item.querySelector(`input[name="work_company_${index}"]`)?.value;
+    const position = item.querySelector(`input[name="work_position_${index}"]`)?.value;
+    if (company && position) {
+      workExperiences.push({
+        company: company,
+        position: position,
+        start_date: item.querySelector(`input[name="work_start_${index}"]`)?.value,
+        end_date: item.querySelector(`input[name="work_end_${index}"]`)?.value,
+        is_current: item.querySelector(`input[name="work_current_${index}"]`)?.checked,
+        description: item.querySelector(`textarea[name="work_description_${index}"]`)?.value,
+        location: item.querySelector(`input[name="work_location_${index}"]`)?.value
+      });
+    }
+  });
+  
+  try {
+    const response = await fetch('{% url "applicant:create_profile" %}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+      },
+      body: JSON.stringify({
+        work_experiences: workExperiences
+      })
+    });
+    
+    if (response.ok) {
+      showSaveMessage('Work experience saved successfully!');
+    } else {
+      showSaveMessage('Error saving work experience. Please try again.');
+    }
+  } catch (error) {
+    showSaveMessage('Error saving work experience. Please try again.');
+  }
+}
+
+async function saveEducation() {
+  // Collect education data and save via AJAX
+  const education = [];
+  document.querySelectorAll('.education-item').forEach((item, index) => {
+    const institution = item.querySelector(`input[name="edu_institution_${index}"]`)?.value;
+    const degree = item.querySelector(`input[name="edu_degree_${index}"]`)?.value;
+    if (institution && degree) {
+      education.push({
+        institution: institution,
+        degree: degree,
+        field_of_study: item.querySelector(`input[name="edu_field_${index}"]`)?.value,
+        start_date: item.querySelector(`input[name="edu_start_${index}"]`)?.value,
+        end_date: item.querySelector(`input[name="edu_end_${index}"]`)?.value,
+        is_current: item.querySelector(`input[name="edu_current_${index}"]`)?.checked,
+        gpa: item.querySelector(`input[name="edu_gpa_${index}"]`)?.value
+      });
+    }
+  });
+  
+  try {
+    const response = await fetch('{% url "applicant:create_profile" %}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+      },
+      body: JSON.stringify({
+        education: education
+      })
+    });
+    
+    if (response.ok) {
+      showSaveMessage('Education saved successfully!');
+    } else {
+      showSaveMessage('Error saving education. Please try again.');
+    }
+  } catch (error) {
+    showSaveMessage('Error saving education. Please try again.');
+  }
+}
+
+async function saveSkills() {
+  // Collect skills data and save via AJAX
+  const skills = [];
+  document.querySelectorAll('.skill-item').forEach((item, index) => {
+    const skillName = item.querySelector(`input[name="skill_name_${index}"]`)?.value;
+    if (skillName) {
+      skills.push({
+        skill_name: skillName,
+        proficiency_level: item.querySelector(`select[name="skill_level_${index}"]`)?.value,
+        years_of_experience: item.querySelector(`input[name="skill_years_${index}"]`)?.value
+      });
+    }
+  });
+  
+  try {
+    const response = await fetch('{% url "applicant:create_profile" %}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+      },
+      body: JSON.stringify({
+        skills: skills
+      })
+    });
+    
+    if (response.ok) {
+      showSaveMessage('Skills saved successfully!');
+    } else {
+      showSaveMessage('Error saving skills. Please try again.');
+    }
+  } catch (error) {
+    showSaveMessage('Error saving skills. Please try again.');
+  }
+}
+
+async function saveLinks() {
+  // Collect links data and save via AJAX
+  const links = [];
+  document.querySelectorAll('.link-item').forEach((item, index) => {
+    const url = item.querySelector(`input[name="link_url_${index}"]`)?.value;
+    if (url) {
+      links.push({
+        url: url,
+        platform: item.querySelector(`select[name="link_platform_${index}"]`)?.value,
+        description: item.querySelector(`input[name="link_description_${index}"]`)?.value
+      });
+    }
+  });
+  
+  try {
+    const response = await fetch('{% url "applicant:create_profile" %}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+      },
+      body: JSON.stringify({
+        links: links
+      })
+    });
+    
+    if (response.ok) {
+      showSaveMessage('Links saved successfully!');
+    } else {
+      showSaveMessage('Error saving links. Please try again.');
+    }
+  } catch (error) {
+    showSaveMessage('Error saving links. Please try again.');
+  }
+}
+
+function showSaveMessage(message) {
+  // Create and show a success message
+  const messageDiv = document.createElement('div');
+  messageDiv.className = 'alert alert-success alert-dismissible fade show position-fixed';
+  messageDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+  messageDiv.innerHTML = `
+    ${message}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
+  document.body.appendChild(messageDiv);
+  
+  // Auto-remove after 3 seconds
+  setTimeout(() => {
+    if (messageDiv.parentNode) {
+      messageDiv.parentNode.removeChild(messageDiv);
+    }
+  }, 3000);
+}
+</script>
+{% endblock %}
