@@ -3,7 +3,7 @@ from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.forms.utils import ErrorList
 from django.utils.safestring import mark_safe
 
-from account.models import Account, UserType
+from account.models import Account
 from applicant.models import Applicant
 from recruiter.models import Recruiter
 
@@ -24,7 +24,8 @@ class CustomErrorList(ErrorList):
 
 class CustomUserCreationForm(UserCreationForm):
     user_type = forms.ChoiceField(
-        choices=UserType.choices, widget=forms.Select(attrs={"class": "form-control"})
+        choices=[('applicant', 'Applicant'), ('recruiter', 'Recruiter')],
+        widget=forms.Select(attrs={"class": "form-control"})
     )
     email = forms.EmailField(
         required=True, widget=forms.EmailInput(attrs={"class": "form-control"})
@@ -98,7 +99,6 @@ class CustomUserCreationForm(UserCreationForm):
             "email",
             "first_name",
             "last_name",
-            "user_type",
             "phone_number",
             "street_address",
             "city",

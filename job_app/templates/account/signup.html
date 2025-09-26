@@ -110,6 +110,29 @@
             </div>
           </div>
 
+          <!-- User Type Specific Fields -->
+          <div id="applicantFields" class="mt-3" style="display: none;">
+            <hr class="my-3">
+            <h6 class="fw-semibold mb-3">Applicant Information</h6>
+            <div class="mb-3">
+              <label for="id_headline" class="form-label">Professional Headline (Optional)</label>
+              <input type="text" class="form-control" id="id_headline" name="headline" placeholder="e.g. Software Engineer with 3+ years experience">
+            </div>
+          </div>
+
+          <div id="recruiterFields" class="mt-3" style="display: none;">
+            <hr class="my-3">
+            <h6 class="fw-semibold mb-3">Recruiter Information</h6>
+            <div class="mb-3">
+              <label for="id_company" class="form-label">Company (Optional)</label>
+              <input type="text" class="form-control" id="id_company" name="company" placeholder="Your company name">
+            </div>
+            <div class="mb-3">
+              <label for="id_position" class="form-label">Your Position (Optional)</label>
+              <input type="text" class="form-control" id="id_position" name="position" placeholder="e.g. HR Manager, Talent Acquisition">
+            </div>
+          </div>
+
           <div class="d-grid mb-3">
             <button type="submit" class="btn btn-primary btn-lg">Create Account</button>
           </div>
@@ -126,12 +149,40 @@
 </div>
 
 <script>
+// Show/hide user type specific fields
+document.querySelectorAll('input[name="user_type"]').forEach(radio => {
+  radio.addEventListener('change', function() {
+    const applicantFields = document.getElementById('applicantFields');
+    const recruiterFields = document.getElementById('recruiterFields');
+
+    if (this.value === 'applicant') {
+      applicantFields.style.display = 'block';
+      recruiterFields.style.display = 'none';
+    } else if (this.value === 'recruiter') {
+      applicantFields.style.display = 'none';
+      recruiterFields.style.display = 'block';
+    }
+  });
+});
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+  const checkedRadio = document.querySelector('input[name="user_type"]:checked');
+  if (checkedRadio) {
+    checkedRadio.dispatchEvent(new Event('change'));
+  }
+});
+
 document.getElementById('signupForm').addEventListener('submit', async function(e) {
   e.preventDefault();
-  
+
+  // Clear any existing error messages
+  const existingErrors = this.querySelectorAll('.alert-danger');
+  existingErrors.forEach(error => error.remove());
+
   const formData = new FormData(this);
   const data = Object.fromEntries(formData.entries());
-  
+
   try {
     const response = await fetch('{% url "account:signup" %}', {
       method: 'POST',
@@ -141,22 +192,38 @@ document.getElementById('signupForm').addEventListener('submit', async function(
       },
       body: JSON.stringify(data)
     });
-    
+
     const result = await response.json();
-    
+
     if (result.success) {
-      // Redirect to profile creation or home page
+      // Redirect based on user type
       if (data.user_type === 'applicant') {
         window.location.href = '{% url "applicant:create_profile" %}';
+      } else if (data.user_type === 'recruiter') {
+        window.location.href = '{% url "home:index" %}';
       } else {
         window.location.href = '{% url "home:index" %}';
       }
     } else {
-      // Show error message
-      const errorDiv = document.createElement('div');
-      errorDiv.className = 'alert alert-danger mt-3';
-      errorDiv.textContent = result.error || 'Signup failed. Please try again.';
-      this.appendChild(errorDiv);
+      // Show error messages
+      if (result.errors) {
+        // Handle form field errors
+        for (const [field, errors] of Object.entries(result.errors)) {
+          const fieldElement = document.querySelector(`[name="${field}"]`);
+          if (fieldElement) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'alert alert-danger mt-2';
+            errorDiv.textContent = Array.isArray(errors) ? errors.join(', ') : errors;
+            fieldElement.parentNode.appendChild(errorDiv);
+          }
+        }
+      } else {
+        // General error message
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'alert alert-danger mt-3';
+        errorDiv.textContent = result.error || 'Signup failed. Please try again.';
+        this.appendChild(errorDiv);
+      }
     }
   } catch (error) {
     console.error('Error:', error);

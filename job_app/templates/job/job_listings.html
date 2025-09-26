@@ -50,7 +50,8 @@
                 <i class="bi bi-clock"></i> Posted {{ job.created_at|timesince }} ago
               </small>
             </div>
-            {% if user.is_authenticated and user.user_type == 'applicant' %}
+            {% load applicant_utils %}
+            {% if user.is_authenticated and user|is_applicant %}
               {% if job.id in applied_job_ids %}
                 <button class="btn btn-success btn-sm" disabled>
                   <i class="bi bi-check-circle"></i> Applied

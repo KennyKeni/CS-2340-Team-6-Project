@@ -10,7 +10,7 @@ from django.contrib.auth import get_user_model
 
 from .decorators import applicant_required
 from .models import Applicant, Application, Education, Link, Skill, WorkExperience
-from account.models import UserType
+from applicant.utils import is_applicant
 
 User = get_user_model()
 
@@ -194,7 +194,7 @@ def applicant_search(request):
                 "zip_code": account.zip_code,
                 "headline": applicant.headline,
                 "resume": applicant.resume,
-                "user_type": account.user_type,
+                "user_type": 'applicant' if is_applicant(account) else 'recruiter' if hasattr(account, 'recruiter') else '',
                 "work_experiences": work_experiences,
                 "education": education,
                 "skills": skills,
@@ -247,7 +247,7 @@ def create_profile(request):
     user = request.user
 
     # Check if user is an applicant
-    if user.user_type != UserType.APPLICANT:
+    if not is_applicant(user):
         return redirect('home:index')
 
     # Get or create applicant profile
@@ -419,7 +419,7 @@ def view_profile(request):
     user = request.user
 
     # Check if user is an applicant
-    if user.user_type != UserType.APPLICANT:
+    if not is_applicant(user):
         return redirect('home:index')
 
     try:

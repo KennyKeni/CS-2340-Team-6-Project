@@ -21,30 +21,7 @@
     <header class="py-3 border-bottom">
       <div class="container d-flex align-items-center justify-content-between">
         <div class="h5 m-0">
-          <a href="{% url 'home:index' %}" class="text-decoration-none text-dark">DevJNoReverseMatch at /jobs/
-            Reverse for 'my_applications' not found. 'my_applications' is not a valid view function or pattern name.
-            Request Method:	GET
-            Request URL:	http://127.0.0.1:8000/jobs/
-            Django Version:	5.0
-            Exception Type:	NoReverseMatch
-            Exception Value:	
-            Reverse for 'my_applications' not found. 'my_applications' is not a valid view function or pattern name.
-            Exception Location:	C:\Users\jahir\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\urls\resolvers.py, line 848, in _reverse_with_prefix
-            Raised during:	job.views.job_listings
-            Python Executable:	C:\Users\jahir\AppData\Local\Programs\Python\Python313\python.exe
-            Python Version:	3.13.7
-            Python Path:	
-            ['C:\\Users\\jahir\\OneDrive\\Desktop\\CS-2340-Team-6-Project',
-             'C:\\Users\\jahir\\AppData\\Local\\Programs\\Python\\Python313\\python313.zip',
-             'C:\\Users\\jahir\\AppData\\Local\\Programs\\Python\\Python313\\DLLs',
-             'C:\\Users\\jahir\\AppData\\Local\\Programs\\Python\\Python313\\Lib',
-             'C:\\Users\\jahir\\AppData\\Local\\Programs\\Python\\Python313',
-             'C:\\Users\\jahir\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages']
-            Server time:	Tue, 23 Sep 2025 20:39:59 +0000
-            Error during template rendering
-            In template C:\Users\jahir\OneDrive\Desktop\CS-2340-Team-6-Project\job_app\templates\job\job_listings.html, error at line 14
-            
-            Reverse for 'my_applications' not found. 'my_applications' is not a valid view function or pattern name.obs</a>
+          <a href="{% url 'home:index' %}" class="text-decoration-none text-dark">DevJobs</a>
         </div>
         <div class="d-flex align-items-center gap-3">
           <!-- Navigation Links -->
@@ -55,9 +32,13 @@
           </nav>
           {% if user.is_authenticated %}
             <span class="text-muted small">Welcome, {{ user.first_name|default:user.username }}!</span>
-            {% if user.user_type == 'applicant' %}
+            {% load applicant_utils %}
+            {% if user|is_applicant %}
               <a href="{% url 'applicant:view_profile' %}" class="btn btn-outline-primary btn-sm">
                 <i class="bi bi-person"></i> My Profile
+              </a>
+              <a href="{% url 'applicant:applications' %}" class="btn btn-outline-info btn-sm">
+                <i class="bi bi-file-earmark-text"></i> My Applications
               </a>
             {% endif %}
             <a href="{% url 'account:logout' %}" class="btn btn-outline-danger btn-sm">

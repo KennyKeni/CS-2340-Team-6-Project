@@ -27,7 +27,8 @@
               {% endif %}
             </div>
             <div class="text-end">
-              {% if user.is_authenticated and user.user_type == 'applicant' %}
+              {% load applicant_utils %}
+              {% if user.is_authenticated and user|is_applicant %}
                 {% if has_applied %}
                   <button class="btn btn-success" disabled>
                     <i class="bi bi-check-circle"></i> Applied

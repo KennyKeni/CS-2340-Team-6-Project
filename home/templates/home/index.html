@@ -24,7 +24,8 @@
         <h5 class="card-title">Create your profile</h5>
         <p class="card-text text-body-secondary small">Showcase your skills, education, and experience to recruiters.</p>
         {% if user.is_authenticated %}
-          {% if user.user_type == 'applicant' %}
+          {% load applicant_utils %}
+          {% if user|is_applicant %}
             <div class="d-flex gap-2">
               <a href="{% url 'applicant:view_profile' %}" class="btn btn-outline-primary btn-sm">View Profile</a>
               <a href="{% url 'applicant:create_profile' %}" class="btn btn-primary btn-sm">Edit Profile</a>

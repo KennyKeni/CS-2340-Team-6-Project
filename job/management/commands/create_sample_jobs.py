@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
-from job.models import Job
-from account.models import UserType
+from job.models import JobPosting
+from django.contrib.auth.models import Group
 
 User = get_user_model()
 
@@ -16,7 +16,7 @@ class Command(BaseCommand):
                 'email': 'recruiter@techcorp.com',
                 'first_name': 'John',
                 'last_name': 'Recruiter',
-                'user_type': UserType.RECRUITER,
+# User will be added to recruiter group below
                 'is_staff': True
             }
         )
@@ -24,6 +24,9 @@ class Command(BaseCommand):
         if created:
             recruiter.set_password('password123')
             recruiter.save()
+            # Add user to recruiter group
+            recruiter_group, _ = Group.objects.get_or_create(name='recruiter')
+            recruiter.groups.add(recruiter_group)
             self.stdout.write(self.style.SUCCESS('Created recruiter user'))
 
         # Sample jobs data
@@ -87,11 +90,11 @@ class Command(BaseCommand):
 
         created_count = 0
         for job_data in sample_jobs:
-            job, created = Job.objects.get_or_create(
+            job, created = JobPosting.objects.get_or_create(
                 title=job_data['title'],
                 company=job_data['company'],
                 defaults={
-                    'recruiter': recruiter,
+                    'owner': recruiter,
                     'location': job_data['location'],
                     'job_type': job_data['job_type'],
                     'description': job_data['description'],

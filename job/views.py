@@ -5,13 +5,14 @@ from django.contrib import messages
 from django.views.decorators.http import require_http_methods
 from django.db import IntegrityError
 from django.utils import timezone
-from .models import Job, JobApplication
-from account.models import UserType
+from .models import JobPosting
+from applicant.models import Application
+from applicant.utils import is_applicant
 
 
 def job_listings(request):
     """Display all active job listings"""
-    jobs = Job.objects.filter(is_active=True).select_related('recruiter')
+    jobs = JobPosting.objects.filter(is_active=True).select_related('owner')
     
     # Filter by job type if provided
     job_type = request.GET.get('type')
@@ -29,8 +30,8 @@ def job_listings(request):
         jobs = jobs.filter(company__icontains=company)
     
     # Check if user has already applied to each job
-    if request.user.is_authenticated and request.user.user_type == UserType.APPLICANT:
-        applied_job_ids = JobApplication.objects.filter(
+    if request.user.is_authenticated and is_applicant(request.user):
+        applied_job_ids = Application.objects.filter(
             applicant=request.user
         ).values_list('job_id', flat=True)
     else:
@@ -39,19 +40,19 @@ def job_listings(request):
     context = {
         'jobs': jobs,
         'applied_job_ids': applied_job_ids,
-        'job_types': Job._meta.get_field('job_type').choices,
+        'job_types': JobPosting._meta.get_field('job_type').choices,
     }
     return render(request, 'job/job_listings.html', context)
 
 
 def job_detail(request, job_id):
     """Display detailed job information"""
-    job = get_object_or_404(Job, id=job_id, is_active=True)
-    
+    job = get_object_or_404(JobPosting, id=job_id, is_active=True)
+
     # Check if user has already applied
     has_applied = False
-    if request.user.is_authenticated and request.user.user_type == UserType.APPLICANT:
-        has_applied = JobApplication.objects.filter(
+    if request.user.is_authenticated and is_applicant(request.user):
+        has_applied = Application.objects.filter(
             job=job, 
             applicant=request.user
         ).exists()
@@ -67,13 +68,13 @@ def job_detail(request, job_id):
 @require_http_methods(["POST"])
 def apply_to_job(request, job_id):
     """Apply to a job with personalized note"""
-    if request.user.user_type != UserType.APPLICANT:
+    if not is_applicant(request.user):
         return JsonResponse({'error': 'Only applicants can apply to jobs'}, status=403)
     
-    job = get_object_or_404(Job, id=job_id, is_active=True)
-    
+    job = get_object_or_404(JobPosting, id=job_id, is_active=True)
+
     # Check if user has already applied
-    if JobApplication.objects.filter(job=job, applicant=request.user).exists():
+    if Application.objects.filter(job=job, applicant=request.user).exists():
         return JsonResponse({'error': 'You have already applied to this job'}, status=400)
     
     try:
@@ -86,10 +87,10 @@ def apply_to_job(request, job_id):
             personalized_note = request.POST.get('personalized_note', '')
         
         # Create application
-        application = JobApplication.objects.create(
+        application = Application.objects.create(
             job=job,
             applicant=request.user,
-            personalized_note=personalized_note
+            note=personalized_note
         )
         
         if request.content_type == 'application/json':
