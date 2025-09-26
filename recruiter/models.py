@@ -44,6 +44,9 @@ class JobPosting(models.Model):
         help_text="List skills (comma- or line-separated).",
         blank=True,
     )
+    location = models.CharField(max_length=255, blank=True)
+    remote = models.BooleanField(default=False, help_text="Is this job remote?")
+    visa_sponsorship = models.BooleanField(default=False, help_text="Visa sponsorship available?")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

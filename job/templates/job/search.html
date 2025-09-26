@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Search Jobs · DevJobs{% endblock %}
+
+{# Hero with compact search bar #}
+{% block hero %}
+<section class="hero">
+  <div class="container text-center">
+    <h1 class="display-5 fw-semibold mb-3">Job Search</h1>
+    <form method="get" class="searchbar mx-auto">
+      <div class="row g-2">
+        <div class="col-12 col-md-4">
+          <input type="text" name="title" class="form-control form-control-lg"
+                 placeholder="Job title (e.g., Backend Engineer)"
+                 value="{{ request.GET.title }}">
+        </div>
+        <div class="col-12 col-md-4">
+          <input type="text" name="location" class="form-control form-control-lg"
+                 placeholder="Location (e.g., Remote, NYC)"
+                 value="{{ request.GET.location }}">
+        </div>
+        <div class="col-12 col-md-4">
+          <input type="text" name="skills" class="form-control form-control-lg"
+                 placeholder="Skills (comma separated)"
+                 value="{{ request.GET.skills }}">
+        </div>
+
+        <div class="col-6 col-md-3">
+          <input type="text" name="salary_min" class="form-control form-control-lg"
+                 placeholder="Min Salary"
+                 value="{{ request.GET.salary_min }}">
+        </div>
+        <div class="col-6 col-md-3">
+          <input type="text" name="salary_max" class="form-control form-control-lg"
+                 placeholder="Max Salary"
+                 value="{{ request.GET.salary_max }}">
+        </div>
+        <div class="col-6 col-md-3">
+          <select name="remote" class="form-select form-select-lg">
+            <option value="">Remote/On-site</option>
+            <option value="remote" {% if request.GET.remote == 'remote' %}selected{% endif %}>Remote</option>
+            <option value="onsite" {% if request.GET.remote == 'onsite' %}selected{% endif %}>On-site</option>
+          </select>
+        </div>
+        <div class="col-6 col-md-3">
+          <select name="visa" class="form-select form-select-lg">
+            <option value="">Visa Sponsorship</option>
+            <option value="yes" {% if request.GET.visa == 'yes' %}selected{% endif %}>Yes</option>
+            <option value="no" {% if request.GET.visa == 'no' %}selected{% endif %}>No</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="d-grid d-md-flex justify-content-md-center mt-3">
+        <button type="submit" class="btn btn-primary btn-lg px-4">Search</button>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+  <div class="d-flex justify-content-between align-items-baseline mb-3">
+    <h2 class="h4 mb-0">Results</h2>
+    <span class="text-body-secondary">
+      {{ jobs|length }} result{{ jobs|length|pluralize }}
+    </span>
+  </div>
+
+  <div class="row g-3">
+    {% for job in jobs %}
+      <div class="col-12">
+        <div class="card card-hover h-100">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start">
+              <div class="me-3">
+                <h5 class="card-title mb-1">{{ job.title }}</h5>
+                <div class="small text-body-secondary">
+                  {% if job.location %}{{ job.location }}{% endif %}
+                  {% if job.work_hours %}{% if job.location %} • {% endif %}{{ job.work_hours }}{% endif %}
+                </div>
+              </div>
+              <div class="text-end">
+                {% if job.salary %}
+                  <span class="badge text-bg-light border me-1">{{ job.salary }}</span>
+                {% endif %}
+                {% if job.remote %}
+                  <span class="badge text-bg-success me-1">Remote</span>
+                {% else %}
+                  <span class="badge text-bg-secondary me-1">On-site</span>
+                {% endif %}
+                {% if job.visa_sponsorship %}
+                  <span class="badge text-bg-primary">Visa</span>
+                {% endif %}
+              </div>
+            </div>
+
+            {% if job.summary %}
+              <p class="card-text mt-2 mb-2">{{ job.summary }}</p>
+            {% endif %}
+
+            {% if job.skills_required %}
+              <div class="small text-body-secondary">
+                <span class="fw-semibold">Skills:</span> {{ job.skills_required }}
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    {% empty %}
+      <div class="col-12">
+        <div class="alert alert-light border" role="alert">
+          No jobs found. Try broadening your filters.
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
