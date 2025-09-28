@@ -2,7 +2,7 @@
 
 A Django web application for CS-2340 class project, built with modern Python tooling using UV package manager.
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -40,7 +40,7 @@ A Django web application for CS-2340 class project, built with modern Python too
    .venv\Scripts\activate     # On Windows
    ```
 
-## 🛠️ Development
+## Development
 
 ### Running the Development Server
 
@@ -86,7 +86,7 @@ uv run python manage.py test
 uv run python manage.py collectstatic
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 CS-2340-Team-6-Project/
@@ -103,7 +103,7 @@ CS-2340-Team-6-Project/
 └── README.md            # This file
 ```
 
-## 🔧 Configuration
+## Configuration
 
 ### Environment Variables
 
@@ -111,18 +111,18 @@ CS-2340-Team-6-Project/
 
 The project is configured to use SQLite by default, which is suitable for development. This will not be the final database of choice.
 
-## 📦 Dependencies
+## Dependencies
 
 - **Django 5.2.6+**: Web framework
 - **Pillow 11.3.0+**: Python Imaging Library for image processing
 
-## 📚 Additional Resources
+## Additional Resources
 
 - [Django Documentation](https://docs.djangoproject.com/)
 - [UV Documentation](https://docs.astral.sh/uv/)
 - [Python Package Index](https://pypi.org/)
 
-## 👥 Team
+## Team
 
 CS-2340 Team 6
 

@@ -107,3 +107,68 @@ def apply_to_job(request, job_id):
         return JsonResponse({'error': 'You have already applied to this job'}, status=400)
     except Exception as e:
         return JsonResponse({'error': 'Failed to submit application'}, status=500)
+
+
+def search_jobs(request):
+    """Enhanced job search with advanced filtering"""
+    jobs = JobPosting.objects.filter(is_active=True).select_related('owner')
+
+    # Get search parameters
+    title = request.GET.get('title', '').strip()
+    skills = request.GET.get('skills', '').strip()
+    location = request.GET.get('location', '').strip()
+    salary_min = request.GET.get('salary_min', '').strip()
+    salary_max = request.GET.get('salary_max', '').strip()
+    remote = request.GET.get('remote', '')
+    visa = request.GET.get('visa', '')
+
+    # Apply filters
+    if title:
+        jobs = jobs.filter(title__icontains=title)
+
+    if skills:
+        # Search in requirements field for skills (comma-separated)
+        for skill in [s.strip() for s in skills.split(',') if s.strip()]:
+            jobs = jobs.filter(requirements__icontains=skill)
+
+    if location:
+        jobs = jobs.filter(location__icontains=location)
+
+    if salary_min:
+        try:
+            min_salary = float(salary_min)
+            jobs = jobs.filter(salary_min__gte=min_salary)
+        except ValueError:
+            pass
+
+    if salary_max:
+        try:
+            max_salary = float(salary_max)
+            jobs = jobs.filter(salary_max__lte=max_salary)
+        except ValueError:
+            pass
+
+    if remote == 'remote':
+        jobs = jobs.filter(job_type='remote')
+    elif remote == 'onsite':
+        jobs = jobs.exclude(job_type='remote')
+
+    if visa == 'yes':
+        jobs = jobs.filter(visa_sponsorship=True)
+    elif visa == 'no':
+        jobs = jobs.filter(visa_sponsorship=False)
+
+    # Check if user has already applied to each job
+    if request.user.is_authenticated and is_applicant(request.user):
+        applied_job_ids = Application.objects.filter(
+            applicant=request.user
+        ).values_list('job_id', flat=True)
+    else:
+        applied_job_ids = []
+
+    context = {
+        'jobs': jobs,
+        'applied_job_ids': applied_job_ids,
+        'job_types': JobPosting._meta.get_field('job_type').choices,
+    }
+    return render(request, 'job/search.html', context)

@@ -33,12 +33,20 @@
           {% if user.is_authenticated %}
             <span class="text-muted small">Welcome, {{ user.first_name|default:user.username }}!</span>
             {% load applicant_utils %}
+            {% load recruiter_utils %}
             {% if user|is_applicant %}
               <a href="{% url 'applicant:view_profile' %}" class="btn btn-outline-primary btn-sm">
                 <i class="bi bi-person"></i> My Profile
               </a>
               <a href="{% url 'applicant:applications' %}" class="btn btn-outline-info btn-sm">
                 <i class="bi bi-file-earmark-text"></i> My Applications
+              </a>
+            {% elif user|is_recruiter %}
+              <a href="{% url 'recruiter:candidate_search' %}" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-people"></i> Find Candidates
+              </a>
+              <a href="{% url 'recruiter:jobs' %}" class="btn btn-outline-info btn-sm">
+                <i class="bi bi-briefcase-fill"></i> My Job Postings
               </a>
             {% endif %}
             <a href="{% url 'account:logout' %}" class="btn btn-outline-danger btn-sm">
