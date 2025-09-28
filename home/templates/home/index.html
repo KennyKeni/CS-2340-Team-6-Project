@@ -9,7 +9,7 @@
     <h1 class="display-5 fw-semibold mb-2">Welcome to DevJobs</h1>
     <p class="lead mb-0">Find your next role. Post openings. Track applications.</p>
     <div class="mt-4">
-      <a href="#" class="btn btn-primary btn-lg">Browse Jobs</a>
+      <a href="{% url 'job:search_jobs' %}" class="btn btn-primary btn-lg">Browse Jobs</a>
       <a href="#" class="btn btn-outline-light btn-lg ms-2">Post a Job</a>
     </div>
   </div>
@@ -23,6 +23,19 @@
       <div class="card-body">
         <h5 class="card-title">Create your profile</h5>
         <p class="card-text text-body-secondary small">Showcase your skills, education, and experience to recruiters.</p>
+        {% if user.is_authenticated %}
+          {% load applicant_utils %}
+          {% if user|is_applicant %}
+            <div class="d-flex gap-2">
+              <a href="{% url 'applicant:view_profile' %}" class="btn btn-outline-primary btn-sm">View Profile</a>
+              <a href="{% url 'applicant:create_profile' %}" class="btn btn-primary btn-sm">Edit Profile</a>
+            </div>
+          {% else %}
+            <a href="{% url 'home:index' %}" class="btn btn-primary btn-sm">Find Your Job Today!</a>
+          {% endif %}
+        {% else %}
+          <a href="{% url 'account:login' %}" class="btn btn-primary btn-sm">Find Your Job Today!</a>
+        {% endif %}
       </div>
     </div>
   </div>
@@ -31,6 +44,7 @@
       <div class="card-body">
         <h5 class="card-title">Search and apply</h5>
         <p class="card-text text-body-secondary small">Use filters to find the right fit and apply in one click.</p>
+        <a href="{% url 'job:job_listings' %}" class="btn btn-primary btn-sm">Browse Jobs</a>
       </div>
     </div>
   </div>

@@ -27,8 +27,9 @@
         <div class="card h-100 card-hover">
           <div class="card-body d-flex flex-column">
             <h5 class="card-title">{{ job.title }}</h5>
+            <p class="text-muted small">{{ job.company }} • {{ job.location }}</p>
             <p class="card-text text-body-secondary small mb-4">
-              {{ job.summary|truncatechars:180 }}
+              {{ job.description|truncatechars:180 }}
             </p>
 
             <div class="mt-auto d-flex justify-content-between">
@@ -41,11 +42,16 @@
                 data-mode="edit"
                 data-action-url="{% url 'recruiter:job_update' job.pk %}"
                 data-title="{{ job.title|escapejs }}"
-                data-summary="{{ job.summary|escapejs }}"
-                data-responsibilities="{{ job.responsibilities|escapejs }}"
-                data-salary="{{ job.salary|escapejs }}"
-                data-work_hours="{{ job.work_hours|escapejs }}"
-                data-skills_required="{{ job.skills_required|escapejs }}"
+                data-company="{{ job.company|escapejs }}"
+                data-location="{{ job.location|escapejs }}"
+                data-job_type="{{ job.job_type|escapejs }}"
+                data-description="{{ job.description|escapejs }}"
+                data-requirements="{{ job.requirements|escapejs }}"
+                data-benefits="{{ job.benefits|escapejs }}"
+                data-salary_min="{{ job.salary_min|default:'' }}"
+                data-salary_max="{{ job.salary_max|default:'' }}"
+                data-salary_currency="{{ job.salary_currency|escapejs }}"
+                data-application_deadline="{{ job.application_deadline|date:'Y-m-d\TH:i'|default:'' }}"
               >
                 Edit
               </button>
@@ -80,38 +86,65 @@
         </div>
 
         <div class="modal-body">
-          <!-- Render fields manually for clarity & control -->
+          <!-- Basic Information -->
           <div class="mb-3">
-            <label class="form-label" for="id_title">Role title</label>
+            <label class="form-label" for="id_title">Job Title *</label>
             {{ form.title }}
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label" for="id_summary">Role summary</label>
-            {{ form.summary }}
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label" for="id_responsibilities">Responsibilities</label>
-            {{ form.responsibilities }}
-            <div class="form-text">One per line.</div>
           </div>
 
           <div class="row">
             <div class="col-md-6 mb-3">
-              <label class="form-label" for="id_salary">Salary</label>
-              {{ form.salary }}
+              <label class="form-label" for="id_company">Company *</label>
+              {{ form.company }}
             </div>
             <div class="col-md-6 mb-3">
-              <label class="form-label" for="id_work_hours">Work hours</label>
-              {{ form.work_hours }}
+              <label class="form-label" for="id_location">Location *</label>
+              {{ form.location }}
             </div>
           </div>
 
           <div class="mb-3">
-            <label class="form-label" for="id_skills_required">Skills required</label>
-            {{ form.skills_required }}
-            <div class="form-text">Comma- or line-separated.</div>
+            <label class="form-label" for="id_job_type">Job Type</label>
+            {{ form.job_type }}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label" for="id_description">Job Description *</label>
+            {{ form.description }}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label" for="id_requirements">Requirements</label>
+            {{ form.requirements }}
+            <div class="form-text">List job requirements and qualifications.</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label" for="id_benefits">Benefits</label>
+            {{ form.benefits }}
+            <div class="form-text">List benefits and perks offered.</div>
+          </div>
+
+          <!-- Salary Information -->
+          <div class="row">
+            <div class="col-md-4 mb-3">
+              <label class="form-label" for="id_salary_min">Min Salary</label>
+              {{ form.salary_min }}
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label" for="id_salary_max">Max Salary</label>
+              {{ form.salary_max }}
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label" for="id_salary_currency">Currency</label>
+              {{ form.salary_currency }}
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label" for="id_application_deadline">Application Deadline</label>
+            {{ form.application_deadline }}
+            <div class="form-text">Optional deadline for applications.</div>
           </div>
         </div>
 
@@ -143,30 +176,45 @@
 
     const mode = button.getAttribute('data-mode') || 'create';
     const form = document.getElementById('jobForm');
-    const titleEl = document.getElementById('id_title');
-    const summaryEl = document.getElementById('id_summary');
-    const respEl = document.getElementById('id_responsibilities');
-    const salaryEl = document.getElementById('id_salary');
-    const hoursEl = document.getElementById('id_work_hours');
-    const skillsEl = document.getElementById('id_skills_required');
     const modalTitle = document.getElementById('jobModalLabel');
+
+    // Get form elements
+    const titleEl = document.getElementById('id_title');
+    const companyEl = document.getElementById('id_company');
+    const locationEl = document.getElementById('id_location');
+    const jobTypeEl = document.getElementById('id_job_type');
+    const descriptionEl = document.getElementById('id_description');
+    const requirementsEl = document.getElementById('id_requirements');
+    const benefitsEl = document.getElementById('id_benefits');
+    const salaryMinEl = document.getElementById('id_salary_min');
+    const salaryMaxEl = document.getElementById('id_salary_max');
+    const salaryCurrencyEl = document.getElementById('id_salary_currency');
+    const deadlineEl = document.getElementById('id_application_deadline');
 
     if (mode === 'create') {
       modalTitle.textContent = 'Create Job Posting';
       form.action = button.getAttribute('data-action-url');
       // Reset all fields
-      [titleEl, summaryEl, respEl, salaryEl, hoursEl, skillsEl].forEach(el => { if (el) el.value = ''; });
+      [titleEl, companyEl, locationEl, jobTypeEl, descriptionEl, requirementsEl, benefitsEl,
+       salaryMinEl, salaryMaxEl, salaryCurrencyEl, deadlineEl].forEach(el => {
+        if (el) el.value = '';
+      });
     } else {
       modalTitle.textContent = 'Edit Job Posting';
       form.action = button.getAttribute('data-action-url');
 
       // Pre-fill from data-* attrs on the edit button
       if (titleEl) titleEl.value = button.getAttribute('data-title') || '';
-      if (summaryEl) summaryEl.value = button.getAttribute('data-summary') || '';
-      if (respEl) respEl.value = button.getAttribute('data-responsibilities') || '';
-      if (salaryEl) salaryEl.value = button.getAttribute('data-salary') || '';
-      if (hoursEl) hoursEl.value = button.getAttribute('data-work_hours') || '';
-      if (skillsEl) skillsEl.value = button.getAttribute('data-skills_required') || '';
+      if (companyEl) companyEl.value = button.getAttribute('data-company') || '';
+      if (locationEl) locationEl.value = button.getAttribute('data-location') || '';
+      if (jobTypeEl) jobTypeEl.value = button.getAttribute('data-job_type') || '';
+      if (descriptionEl) descriptionEl.value = button.getAttribute('data-description') || '';
+      if (requirementsEl) requirementsEl.value = button.getAttribute('data-requirements') || '';
+      if (benefitsEl) benefitsEl.value = button.getAttribute('data-benefits') || '';
+      if (salaryMinEl) salaryMinEl.value = button.getAttribute('data-salary_min') || '';
+      if (salaryMaxEl) salaryMaxEl.value = button.getAttribute('data-salary_max') || '';
+      if (salaryCurrencyEl) salaryCurrencyEl.value = button.getAttribute('data-salary_currency') || '';
+      if (deadlineEl) deadlineEl.value = button.getAttribute('data-application_deadline') || '';
     }
   });
 </script>

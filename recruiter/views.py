@@ -7,8 +7,10 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods
 
 from .decorators import recruiter_required
-from .forms import JobPostingForm
-from .models import JobPosting, Recruiter
+from job.forms import JobPostingForm
+from job.models import JobPosting
+from .models import Recruiter
+from applicant.models import Applicant
 
 
 @require_http_methods(["GET"])
@@ -78,7 +80,7 @@ def recruiter_search(request):
                 "zip_code": account.zip_code,
                 "company": recruiter.company,
                 "position": recruiter.position,
-                "user_type": account.user_type,
+                "user_type": "recruiter",
             }
         )
 
@@ -148,3 +150,59 @@ def job_delete(request, pk: int):
     job.delete()
     messages.success(request, "Job posting deleted.")
     return redirect("recruiter:jobs")
+
+
+@recruiter_required
+def candidate_search(request):
+    """Search for candidates/applicants with filtering"""
+    candidates = Applicant.objects.select_related('account').prefetch_related(
+        'skills', 'work_experiences', 'education', 'links'
+    ).all()
+
+    # Get search parameters
+    q = request.GET.get('q', '').strip()  # Name/headline search
+    skills = request.GET.get('skills', '').strip()
+    projects = request.GET.get('projects', '').strip()  # Links search
+    city = request.GET.get('city', '').strip()
+    state = request.GET.get('state', '').strip()
+    country = request.GET.get('country', '').strip()
+
+    # Apply filters
+    if q:
+        # Search in name (first_name, last_name, username) and headline
+        candidates = candidates.filter(
+            Q(account__first_name__icontains=q) |
+            Q(account__last_name__icontains=q) |
+            Q(account__username__icontains=q) |
+            Q(headline__icontains=q)
+        )
+
+    if skills:
+        # Search in skills (comma-separated)
+        for skill in [s.strip() for s in skills.split(',') if s.strip()]:
+            candidates = candidates.filter(skills__skill_name__icontains=skill)
+
+    if projects:
+        # Search in links (GitHub, portfolio URLs, descriptions)
+        candidates = candidates.filter(
+            Q(links__url__icontains=projects) |
+            Q(links__description__icontains=projects)
+        )
+
+    if city:
+        candidates = candidates.filter(account__city__icontains=city)
+
+    if state:
+        candidates = candidates.filter(account__state__icontains=state)
+
+    if country:
+        candidates = candidates.filter(account__country__icontains=country)
+
+    # Remove duplicates that might occur due to joins
+    candidates = candidates.distinct()
+
+    context = {
+        'candidates': candidates,
+        'template_data': {'title': 'Find Candidates · DevJobs'},
+    }
+    return render(request, 'recruiter/candidate_search.html', context)

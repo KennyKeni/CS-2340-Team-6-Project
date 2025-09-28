@@ -4,6 +4,7 @@ from typing import cast
 
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import Group
 from django.db import transaction
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
@@ -12,9 +13,11 @@ from django.views.decorators.http import require_http_methods
 
 from account.forms import (CustomAuthenticationForm, CustomUserCreationForm,
                            ProfileUpdateForm)
-from account.models import Account, UserType
+from account.models import Account
 from applicant.models import Applicant, Education, Link, Skill, WorkExperience
+from applicant.utils import is_applicant
 from recruiter.models import Recruiter
+from recruiter.utils import is_recruiter
 
 
 # Helper method for anyone that needs it
@@ -23,112 +26,55 @@ def show(request, id):
 
 
 @require_http_methods(["GET", "POST"])
-@csrf_exempt
 def account_signup(request):
     if request.method == "GET":
-        # GET request - render the signup form, something like below
-        # template_data = {}
-        # template_data['title'] = 'Sign Up'
-        # template_data['form'] = CustomUserCreationForm()
-        # return render(request, 'accounts/signup.html', {'template_data': template_data})
-
-        return redirect("/")  # Delete these once implemented
+        template_data = {
+            "title": "Sign Up · DevJobs"
+        }
+        return render(request, 'account/signup.html', {'template_data': template_data})
 
     if request.method == "POST":
         # POST request - process form submission
         try:
             data = json.loads(request.body)
+            print(f"Received data: {data}")  # Debug line
         except json.JSONDecodeError:
             return JsonResponse({"error": "Invalid JSON"}, status=400)
 
         form = CustomUserCreationForm(data)
+        print(f"Form errors: {form.errors}")  # Debug line
         if form.is_valid():
             try:
                 with transaction.atomic():
                     user = form.save()
-                    if user.user_type == UserType.APPLICANT:
-                        # Create applicant record
-                        applicant = Applicant.objects.create(
+                    user_type = data.get('user_type')
+                    if user_type == 'applicant':
+                        # Create basic applicant record
+                        Applicant.objects.create(
                             account=user,
                             headline=form.cleaned_data.get("headline", ""),
-                            resume=form.cleaned_data.get("resume", ""),
                         )
-
-                        work_experiences = data.get("work_experiences", [])
-                        for work_exp in work_experiences:
-                            WorkExperience.objects.create(
-                                applicant=applicant,
-                                company=work_exp.get("company", ""),
-                                position=work_exp.get("position", ""),
-                                start_date=datetime.strptime(
-                                    work_exp["start_date"], "%Y-%m-%d"
-                                ).date(),
-                                end_date=(
-                                    datetime.strptime(
-                                        work_exp["end_date"], "%Y-%m-%d"
-                                    ).date()
-                                    if work_exp.get("end_date")
-                                    else None
-                                ),
-                                is_current=work_exp.get("is_current", False),
-                                description=work_exp.get("description", ""),
-                                location=work_exp.get("location", ""),
-                            )
-
-                        education_records = data.get("education", [])
-                        for edu in education_records:
-                            Education.objects.create(
-                                applicant=applicant,
-                                institution=edu.get("institution", ""),
-                                degree=edu.get("degree", ""),
-                                field_of_study=edu.get("field_of_study", ""),
-                                start_date=datetime.strptime(
-                                    edu["start_date"], "%Y-%m-%d"
-                                ).date(),
-                                end_date=(
-                                    datetime.strptime(
-                                        edu["end_date"], "%Y-%m-%d"
-                                    ).date()
-                                    if edu.get("end_date")
-                                    else None
-                                ),
-                                is_current=edu.get("is_current", False),
-                                gpa=edu.get("gpa"),
-                            )
-
-                        skills = data.get("skills", [])
-                        for skill in skills:
-                            Skill.objects.create(
-                                applicant=applicant,
-                                skill_name=skill.get("skill_name", ""),
-                                proficiency_level=skill.get(
-                                    "proficiency_level", "intermediate"
-                                ),
-                                years_of_experience=skill.get("years_of_experience"),
-                            )
-
-                        links = data.get("links", [])
-                        for link in links:
-                            Link.objects.create(
-                                applicant=applicant,
-                                url=link.get("url", ""),
-                                platform=link.get("platform", "other"),
-                                description=link.get("description", ""),
-                            )
-                    elif user.user_type == UserType.RECRUITER:
+                        # Add user to applicant group
+                        applicant_group, _ = Group.objects.get_or_create(name='applicant')
+                        user.groups.add(applicant_group)
+                    elif user_type == 'recruiter':
+                        # Create basic recruiter record
                         Recruiter.objects.create(
                             account=user,
                             company=form.cleaned_data.get("company", ""),
                             position=form.cleaned_data.get("position", ""),
                         )
+                        # Add user to recruiter group
+                        recruiter_group, _ = Group.objects.get_or_create(name='recruiter')
+                        user.groups.add(recruiter_group)
                     login(request, user)
                     return JsonResponse(
                         {
                             "success": True,
                             "message": "Account created successfully",
-                            "user_id": user.id,
+                            "user_id": str(user.id),
                             "username": user.username,
-                            "user_type": user.user_type,
+                            "user_type": user_type,
                         },
                         status=201,
                     )
@@ -144,52 +90,52 @@ def account_signup(request):
     return redirect("/")
 
 
-@require_http_methods(["POST"])
-@csrf_exempt
+@require_http_methods(["GET", "POST"])
 def account_login(request) -> HttpResponse:
     if request.method == "GET":
-        # GET request - render the signup form, something like below
-        # template_data = {}
-        # template_data['title'] = 'Login'
-        # template_data['form'] = CustomUserCreationForm()
-        # return render(request, 'accounts/login.html', {'template_data': template_data})
-        pass
-    try:
-        data = json.loads(request.body)
-    except json.JSONDecodeError:
-        return JsonResponse({"error": "Invalid JSON"}, status=400)
+        template_data = {
+            "title": "Login · DevJobs"
+        }
+        return render(request, 'account/login.html', {'template_data': template_data})
+    
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
 
-    form = CustomAuthenticationForm(data=data)
-    if form.is_valid():
-        username = form.cleaned_data["username"]
-        password = form.cleaned_data["password"]
-        user = authenticate(request, username=username, password=password)
+        form = CustomAuthenticationForm(data=data)
+        if form.is_valid():
+            username = form.cleaned_data["username"]
+            password = form.cleaned_data["password"]
+            user = authenticate(request, username=username, password=password)
 
-        if user is not None:
-            account_user = cast(Account, user)
-            login(request, account_user)
-            return JsonResponse(
-                {
-                    "success": True,
-                    "message": "Login successful",
-                    "user_id": str(account_user.id),
-                    "username": account_user.username,
-                    "user_type": getattr(account_user, "user_type", ""),
-                },
-                status=200,
-            )
+            if user is not None:
+                account_user = cast(Account, user)
+                login(request, account_user)
+                return JsonResponse(
+                    {
+                        "success": True,
+                        "message": "Login successful",
+                        "user_id": str(account_user.id),
+                        "username": account_user.username,
+                        "user_type": 'applicant' if is_applicant(account_user) else 'recruiter' if is_recruiter(account_user) else '',
+                    },
+                    status=200,
+                )
+            else:
+                return JsonResponse(
+                    {"success": False, "error": "Invalid credentials"}, status=401
+                )
         else:
-            return JsonResponse(
-                {"success": False, "error": "Invalid credentials"}, status=401
-            )
-    else:
-        return JsonResponse({"success": False, "errors": form.errors}, status=400)
+            return JsonResponse({"success": False, "errors": form.errors}, status=400)
 
 
+@require_http_methods(["GET", "POST"])
 @login_required
 def account_logout(request) -> HttpResponse:
     logout(request)
-    return redirect("home.index")
+    return redirect("home:index")
 
 
 @require_http_methods(["PATCH"])
@@ -210,7 +156,7 @@ def profile_update(request) -> JsonResponse:
             with transaction.atomic():
                 updated_user = form.save()
 
-                if updated_user.user_type == UserType.APPLICANT:
+                if is_applicant(updated_user):
                     try:
                         applicant = updated_user.applicant
                         # Update applicant fields if provided
@@ -297,7 +243,7 @@ def profile_update(request) -> JsonResponse:
                             {"error": "Applicant profile not found"}, status=404
                         )
 
-                elif updated_user.user_type == UserType.RECRUITER:
+                elif is_recruiter(updated_user):
                     try:
                         recruiter = updated_user.recruiter
                         if "company" in data:
@@ -320,7 +266,7 @@ def profile_update(request) -> JsonResponse:
                         "message": "Profile updated successfully",
                         "user_id": str(updated_user.id),
                         "username": updated_user.username,
-                        "user_type": updated_user.user_type,
+                        "user_type": 'applicant' if is_applicant(updated_user) else 'recruiter' if is_recruiter(updated_user) else '',
                         "email": updated_user.email,
                     },
                     status=200,

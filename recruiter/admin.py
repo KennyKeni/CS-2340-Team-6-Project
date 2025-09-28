@@ -1,8 +1,9 @@
 from django.contrib import admin
-from .models import JobPosting
+from .models import Recruiter
 
-@admin.register(JobPosting)
-class JobPostingAdmin(admin.ModelAdmin):
-    list_display = ("title", "owner", "created_at", "updated_at")
-    search_fields = ("title", "summary", "skills_required", "owner__username")
-    list_filter = ("created_at",)
+@admin.register(Recruiter)
+class RecruiterAdmin(admin.ModelAdmin):
+    list_display = ('account', 'company', 'position')
+    search_fields = ('account__username', 'company', 'position')
+
+# JobPosting admin moved to job/admin.py
