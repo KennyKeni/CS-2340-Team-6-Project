@@ -1,5 +1,7 @@
+{# recruiter/myjobpostings.html #}
 {% extends "base.html" %}
 {% load static %}
+{% load i18n %}
 
 {% block title %}My Job Postings · DevJobs{% endblock %}
 
@@ -7,17 +9,10 @@
 <div class="d-flex align-items-center justify-content-between mb-3">
   <h1 class="h4 m-0">My Job Postings</h1>
 
-  <!-- Create New Post button (opens modal in create mode) -->
-  <button
-    type="button"
-    class="btn btn-primary"
-    data-bs-toggle="modal"
-    data-bs-target="#jobModal"
-    data-mode="create"
-    data-action-url="{% url 'recruiter:job_create' %}"
-  >
+  <!-- Create (server opens modal via GET) -->
+  <a href="{% url 'recruiter:job_create' %}" class="btn btn-primary">
     <i class="fa-solid fa-plus me-1"></i> Create New Post
-  </button>
+  </a>
 </div>
 
 {% if postings %}
@@ -33,30 +28,12 @@
             </p>
 
             <div class="mt-auto d-flex justify-content-between">
-              <!-- Edit triggers the modal in edit mode -->
-              <button
-                type="button"
-                class="btn btn-sm btn-outline-secondary"
-                data-bs-toggle="modal"
-                data-bs-target="#jobModal"
-                data-mode="edit"
-                data-action-url="{% url 'recruiter:job_update' job.pk %}"
-                data-title="{{ job.title|escapejs }}"
-                data-company="{{ job.company|escapejs }}"
-                data-location="{{ job.location|escapejs }}"
-                data-job_type="{{ job.job_type|escapejs }}"
-                data-description="{{ job.description|escapejs }}"
-                data-requirements="{{ job.requirements|escapejs }}"
-                data-benefits="{{ job.benefits|escapejs }}"
-                data-salary_min="{{ job.salary_min|default:'' }}"
-                data-salary_max="{{ job.salary_max|default:'' }}"
-                data-salary_currency="{{ job.salary_currency|escapejs }}"
-                data-application_deadline="{{ job.application_deadline|date:'Y-m-d\TH:i'|default:'' }}"
-              >
+              <!-- Edit (server renders modal prefilled) -->
+              <a href="{% url 'recruiter:job_update' job.pk %}" class="btn btn-sm btn-outline-secondary">
                 Edit
-              </button>
+              </a>
 
-              <!-- Delete POST form -->
+              <!-- Delete -->
               <form method="post" action="{% url 'recruiter:job_delete' job.pk %}" onsubmit="return confirm('Delete this job?');">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
@@ -74,87 +51,108 @@
   </div>
 {% endif %}
 
-<!-- CREATE / EDIT Modal -->
-<div class="modal fade" id="jobModal" tabindex="-1" aria-labelledby="jobModalLabel" aria-hidden="true">
+{# ---------- Modal (server-controlled open/close) ---------- #}
+{# Build action URL using context passed from the view #}
+{% if form_action == "recruiter:job_update" and edit_pk %}
+  {% url form_action edit_pk as modal_action_url %}
+{% else %}
+  {% url form_action as modal_action_url %}
+{% endif %}
+
+<div
+  class="modal fade{% if open_modal %} show{% endif %}"
+  id="jobModal"
+  tabindex="-1"
+  aria-labelledby="jobModalLabel"
+  aria-hidden="{% if open_modal %}false{% else %}true{% endif %}"
+  {% if open_modal %}style="display:block;"{% endif %}
+>
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content">
-      <form id="jobForm" method="post" action="{% url 'recruiter:job_create' %}">
+      <form id="jobForm" method="post" action="{{ modal_action_url }}">
         {% csrf_token %}
         <div class="modal-header">
-          <h5 class="modal-title" id="jobModalLabel">Create Job Posting</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <h5 class="modal-title" id="jobModalLabel">{{ modal_title|default:"Create Job Posting" }}</h5>
+          {# Without custom JS, the close button will work only if Bootstrap JS is loaded. #}
+          <a href="{% url 'recruiter:jobs' %}" class="btn-close" aria-label="Close"></a>
         </div>
 
         <div class="modal-body">
-          <!-- Basic Information -->
+          {{ form.non_field_errors }}
+
           <div class="mb-3">
             <label class="form-label" for="id_title">Job Title *</label>
             {{ form.title }}
+            {% if form.title.errors %}<div class="text-danger small">{{ form.title.errors }}</div>{% endif %}
           </div>
 
           <div class="row">
             <div class="col-md-6 mb-3">
               <label class="form-label" for="id_company">Company *</label>
               {{ form.company }}
+              {% if form.company.errors %}<div class="text-danger small">{{ form.company.errors }}</div>{% endif %}
             </div>
             <div class="col-md-6 mb-3">
               <label class="form-label" for="id_location">Location *</label>
               {{ form.location }}
+              {% if form.location.errors %}<div class="text-danger small">{{ form.location.errors }}</div>{% endif %}
             </div>
           </div>
 
           <div class="mb-3">
             <label class="form-label" for="id_job_type">Job Type</label>
             {{ form.job_type }}
+            {% if form.job_type.errors %}<div class="text-danger small">{{ form.job_type.errors }}</div>{% endif %}
           </div>
 
           <div class="mb-3">
             <label class="form-label" for="id_description">Job Description *</label>
             {{ form.description }}
+            {% if form.description.errors %}<div class="text-danger small">{{ form.description.errors }}</div>{% endif %}
           </div>
 
           <div class="mb-3">
             <label class="form-label" for="id_requirements">Requirements</label>
             {{ form.requirements }}
-            <div class="form-text">List job requirements and qualifications.</div>
+            {% if form.requirements.errors %}<div class="text-danger small">{{ form.requirements.errors }}</div>{% endif %}
           </div>
 
           <div class="mb-3">
             <label class="form-label" for="id_benefits">Benefits</label>
             {{ form.benefits }}
-            <div class="form-text">List benefits and perks offered.</div>
+            {% if form.benefits.errors %}<div class="text-danger small">{{ form.benefits.errors }}</div>{% endif %}
           </div>
 
-          <!-- Salary Information -->
           <div class="row">
             <div class="col-md-4 mb-3">
               <label class="form-label" for="id_salary_min">Min Salary</label>
               {{ form.salary_min }}
+              {% if form.salary_min.errors %}<div class="text-danger small">{{ form.salary_min.errors }}</div>{% endif %}
             </div>
             <div class="col-md-4 mb-3">
               <label class="form-label" for="id_salary_max">Max Salary</label>
               {{ form.salary_max }}
+              {% if form.salary_max.errors %}<div class="text-danger small">{{ form.salary_max.errors }}</div>{% endif %}
             </div>
             <div class="col-md-4 mb-3">
               <label class="form-label" for="id_salary_currency">Currency</label>
               {{ form.salary_currency }}
+              {% if form.salary_currency.errors %}<div class="text-danger small">{{ form.salary_currency.errors }}</div>{% endif %}
             </div>
           </div>
 
           <div class="mb-3">
             <label class="form-label" for="id_application_deadline">Application Deadline</label>
             {{ form.application_deadline }}
+            {% if form.application_deadline.errors %}<div class="text-danger small">{{ form.application_deadline.errors }}</div>{% endif %}
             <div class="form-text">Optional deadline for applications.</div>
           </div>
         </div>
 
         <div class="modal-footer d-flex justify-content-between">
-          <!-- X = cancel -->
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <a href="{% url 'recruiter:jobs' %}" class="btn btn-outline-secondary">
             <i class="fa-solid fa-xmark me-1"></i> Cancel
-          </button>
-
-          <!-- ✓ = submit -->
+          </a>
           <button type="submit" class="btn btn-success">
             <i class="fa-solid fa-check me-1"></i> Save
           </button>
@@ -164,58 +162,11 @@
   </div>
 </div>
 
+{# Add a manual backdrop when we render modal as open, so it looks correct without JS #}
+{% if open_modal %}
+  <div class="modal-backdrop fade show"></div>
+{% endif %}
+
 {% endblock %}
 
-{% block extra_js %}
-<script>
-  // Populate the modal form for create vs edit.
-  const jobModal = document.getElementById('jobModal');
-  jobModal.addEventListener('show.bs.modal', function (event) {
-    const button = event.relatedTarget;
-    if (!button) return;
-
-    const mode = button.getAttribute('data-mode') || 'create';
-    const form = document.getElementById('jobForm');
-    const modalTitle = document.getElementById('jobModalLabel');
-
-    // Get form elements
-    const titleEl = document.getElementById('id_title');
-    const companyEl = document.getElementById('id_company');
-    const locationEl = document.getElementById('id_location');
-    const jobTypeEl = document.getElementById('id_job_type');
-    const descriptionEl = document.getElementById('id_description');
-    const requirementsEl = document.getElementById('id_requirements');
-    const benefitsEl = document.getElementById('id_benefits');
-    const salaryMinEl = document.getElementById('id_salary_min');
-    const salaryMaxEl = document.getElementById('id_salary_max');
-    const salaryCurrencyEl = document.getElementById('id_salary_currency');
-    const deadlineEl = document.getElementById('id_application_deadline');
-
-    if (mode === 'create') {
-      modalTitle.textContent = 'Create Job Posting';
-      form.action = button.getAttribute('data-action-url');
-      // Reset all fields
-      [titleEl, companyEl, locationEl, jobTypeEl, descriptionEl, requirementsEl, benefitsEl,
-       salaryMinEl, salaryMaxEl, salaryCurrencyEl, deadlineEl].forEach(el => {
-        if (el) el.value = '';
-      });
-    } else {
-      modalTitle.textContent = 'Edit Job Posting';
-      form.action = button.getAttribute('data-action-url');
-
-      // Pre-fill from data-* attrs on the edit button
-      if (titleEl) titleEl.value = button.getAttribute('data-title') || '';
-      if (companyEl) companyEl.value = button.getAttribute('data-company') || '';
-      if (locationEl) locationEl.value = button.getAttribute('data-location') || '';
-      if (jobTypeEl) jobTypeEl.value = button.getAttribute('data-job_type') || '';
-      if (descriptionEl) descriptionEl.value = button.getAttribute('data-description') || '';
-      if (requirementsEl) requirementsEl.value = button.getAttribute('data-requirements') || '';
-      if (benefitsEl) benefitsEl.value = button.getAttribute('data-benefits') || '';
-      if (salaryMinEl) salaryMinEl.value = button.getAttribute('data-salary_min') || '';
-      if (salaryMaxEl) salaryMaxEl.value = button.getAttribute('data-salary_max') || '';
-      if (salaryCurrencyEl) salaryCurrencyEl.value = button.getAttribute('data-salary_currency') || '';
-      if (deadlineEl) deadlineEl.value = button.getAttribute('data-application_deadline') || '';
-    }
-  });
-</script>
-{% endblock %}
+{# No extra_js block needed #}

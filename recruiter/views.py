@@ -102,44 +102,112 @@ def recruiter_search(request):
 
 @recruiter_required
 def my_job_postings(request):
-    """List the current recruiter's postings and render the create/edit modal."""
     postings = JobPosting.objects.filter(owner=request.user).order_by("-created_at")
     form = JobPostingForm()
     context = {
         "template_data": {"title": "My Job Postings · DevJobs"},
         "postings": postings,
         "form": form,
+        # For default page load, modal is closed; action points to create
+        "open_modal": False,
+        "modal_title": "Create Job Posting",
+        "form_action": "recruiter:job_create",
     }
     return render(request, "recruiter/myjobpostings.html", context)
 
 
 @recruiter_required
-@require_http_methods(["POST"])
+@require_http_methods(["GET", "POST"])
 def job_create(request):
-    """Create a new job posting owned by the current recruiter."""
+    """GET = show blank form in open modal. POST = create."""
+    if request.method == "GET":
+        postings = JobPosting.objects.filter(owner=request.user).order_by("-created_at")
+        form = JobPostingForm()
+        return render(
+            request,
+            "recruiter/myjobpostings.html",
+            {
+                "template_data": {"title": "My Job Postings · DevJobs"},
+                "postings": postings,
+                "form": form,
+                "open_modal": True,                 # modal visible
+                "modal_title": "Create Job Posting",
+                "form_action": "recruiter:job_create",
+            },
+        )
+
+    # POST
     form = JobPostingForm(request.POST)
     if form.is_valid():
         job = form.save(commit=False)
         job.owner = request.user
         job.save()
         messages.success(request, "Job posting created.")
-    else:
-        messages.error(request, "Please fix the errors in the form.")
-    return redirect("recruiter:jobs")
+        return redirect("recruiter:jobs")
+
+    postings = JobPosting.objects.filter(owner=request.user).order_by("-created_at")
+    messages.error(request, "Please fix the errors in the form.")
+    return render(
+        request,
+        "recruiter/myjobpostings.html",
+        {
+            "template_data": {"title": "My Job Postings · DevJobs"},
+            "postings": postings,
+            "form": form,                         # bound with errors
+            "open_modal": True,
+            "modal_title": "Create Job Posting",
+            "form_action": "recruiter:job_create",
+        },
+        status=400,
+    )
 
 
 @recruiter_required
-@require_http_methods(["POST"])
+@require_http_methods(["GET", "POST"])
 def job_update(request, pk: int):
-    """Update an existing job posting (owned by current recruiter)."""
+    """GET = open modal prefilled. POST = save edits."""
     job = get_object_or_404(JobPosting, pk=pk, owner=request.user)
+
+    if request.method == "GET":
+        postings = JobPosting.objects.filter(owner=request.user).order_by("-created_at")
+        form = JobPostingForm(instance=job)
+        return render(
+            request,
+            "recruiter/myjobpostings.html",
+            {
+                "template_data": {"title": "My Job Postings · DevJobs"},
+                "postings": postings,
+                "form": form,
+                "open_modal": True,
+                "modal_title": "Edit Job Posting",
+                "form_action": "recruiter:job_update",  # will pass pk in template
+                "edit_pk": job.pk,
+            },
+        )
+
+    # POST
     form = JobPostingForm(request.POST, instance=job)
     if form.is_valid():
         form.save()
         messages.success(request, "Job posting updated.")
-    else:
-        messages.error(request, "Please fix the errors in the form.")
-    return redirect("recruiter:jobs")
+        return redirect("recruiter:jobs")
+
+    postings = JobPosting.objects.filter(owner=request.user).order_by("-created_at")
+    messages.error(request, "Please fix the errors in the form.")
+    return render(
+        request,
+        "recruiter/myjobpostings.html",
+        {
+            "template_data": {"title": "My Job Postings · DevJobs"},
+            "postings": postings,
+            "form": form,
+            "open_modal": True,
+            "modal_title": "Edit Job Posting",
+            "form_action": "recruiter:job_update",
+            "edit_pk": job.pk,
+        },
+        status=400,
+    )
 
 
 @recruiter_required

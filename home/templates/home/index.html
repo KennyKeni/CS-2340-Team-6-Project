@@ -8,10 +8,6 @@
   <div class="container text-center">
     <h1 class="display-5 fw-semibold mb-2">Welcome to DevJobs</h1>
     <p class="lead mb-0">Find your next role. Post openings. Track applications.</p>
-    <div class="mt-4">
-      <a href="{% url 'job:search_jobs' %}" class="btn btn-primary btn-lg">Browse Jobs</a>
-      <a href="#" class="btn btn-outline-light btn-lg ms-2">Post a Job</a>
-    </div>
   </div>
 </section>
 {% endblock %}
@@ -44,7 +40,7 @@
       <div class="card-body">
         <h5 class="card-title">Search and apply</h5>
         <p class="card-text text-body-secondary small">Use filters to find the right fit and apply in one click.</p>
-        <a href="{% url 'job:job_listings' %}" class="btn btn-primary btn-sm">Browse Jobs</a>
+        <a href="{% url 'job:search_jobs' %}" class="btn btn-primary btn-sm">Browse Jobs</a>
       </div>
     </div>
   </div>
@@ -53,6 +49,7 @@
       <div class="card-body">
         <h5 class="card-title">Track your status</h5>
         <p class="card-text text-body-secondary small">Stay on top of each application—from Applied to Offer.</p>
+        <a href="{% url 'applicant:applications' %}" class="btn btn-primary btn-sm">My Applications</a>
       </div>
     </div>
   </div>
