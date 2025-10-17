@@ -4,7 +4,6 @@ from typing import cast
 
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import Group
 from django.db import transaction
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
@@ -49,24 +48,16 @@ def account_signup(request):
                     user = form.save()
                     user_type = data.get('user_type')
                     if user_type == 'applicant':
-                        # Create basic applicant record
                         Applicant.objects.create(
                             account=user,
                             headline=form.cleaned_data.get("headline", ""),
                         )
-                        # Add user to applicant group
-                        applicant_group, _ = Group.objects.get_or_create(name='applicant')
-                        user.groups.add(applicant_group)
                     elif user_type == 'recruiter':
-                        # Create basic recruiter record
                         Recruiter.objects.create(
                             account=user,
                             company=form.cleaned_data.get("company", ""),
                             position=form.cleaned_data.get("position", ""),
                         )
-                        # Add user to recruiter group
-                        recruiter_group, _ = Group.objects.get_or_create(name='recruiter')
-                        user.groups.add(recruiter_group)
                     login(request, user)
                     return JsonResponse(
                         {
@@ -112,6 +103,13 @@ def account_login(request) -> HttpResponse:
 
             if user is not None:
                 account_user = cast(Account, user)
+
+                if not account_user.is_active:
+                    return JsonResponse(
+                        {"success": False, "error": "Your account has been banned. Please contact support."},
+                        status=403
+                    )
+
                 login(request, account_user)
                 return JsonResponse(
                     {
