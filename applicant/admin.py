@@ -1,5 +1,36 @@
 from django.contrib import admin
-from .models import Application
+from .models import Application, Applicant, WorkExperience, Education, Skill, Link
+
+
+@admin.register(Applicant)
+class ApplicantAdmin(admin.ModelAdmin):
+    list_display = ('account', 'headline', 'get_email')
+    search_fields = ('account__username', 'account__email', 'headline')
+
+    def get_email(self, obj):
+        return obj.account.email
+    get_email.short_description = 'Email'
+
+
+class WorkExperienceInline(admin.TabularInline):
+    model = WorkExperience
+    extra = 0
+
+
+class EducationInline(admin.TabularInline):
+    model = Education
+    extra = 0
+
+
+class SkillInline(admin.TabularInline):
+    model = Skill
+    extra = 0
+
+
+class LinkInline(admin.TabularInline):
+    model = Link
+    extra = 0
+
 
 @admin.register(Application)
 class ApplicationAdmin(admin.ModelAdmin):

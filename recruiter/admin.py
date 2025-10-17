@@ -1,9 +1,12 @@
 from django.contrib import admin
 from .models import Recruiter
 
+
 @admin.register(Recruiter)
 class RecruiterAdmin(admin.ModelAdmin):
-    list_display = ('account', 'company', 'position')
-    search_fields = ('account__username', 'company', 'position')
+    list_display = ('account', 'company', 'position', 'get_email')
+    search_fields = ('account__username', 'account__email', 'company', 'position')
 
-# JobPosting admin moved to job/admin.py
+    def get_email(self, obj):
+        return obj.account.email
+    get_email.short_description = 'Email'

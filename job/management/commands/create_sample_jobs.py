@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from job.models import JobPosting
-from django.contrib.auth.models import Group
+from recruiter.models import Recruiter
 
 User = get_user_model()
 
@@ -9,24 +9,20 @@ class Command(BaseCommand):
     help = 'Create sample job postings for testing'
 
     def handle(self, *args, **options):
-        # Get or create a recruiter user
         recruiter, created = User.objects.get_or_create(
             username='recruiter1',
             defaults={
                 'email': 'recruiter@techcorp.com',
                 'first_name': 'John',
                 'last_name': 'Recruiter',
-# User will be added to recruiter group below
                 'is_staff': True
             }
         )
-        
+
         if created:
             recruiter.set_password('password123')
             recruiter.save()
-            # Add user to recruiter group
-            recruiter_group, _ = Group.objects.get_or_create(name='recruiter')
-            recruiter.groups.add(recruiter_group)
+            Recruiter.objects.create(account=recruiter, company='TechCorp Solutions', position='Lead Recruiter')
             self.stdout.write(self.style.SUCCESS('Created recruiter user'))
 
         # Sample jobs data
