@@ -301,9 +301,12 @@ def compose_email(request, candidate_id):
             
             # Try to send the email
             try:
+                # Add recruiter signature to email body
+                email_body_with_signature = f"{email.body}\n\n---\n{request.user.first_name} {request.user.last_name}\n{request.user.email}"
+
                 send_mail(
                     subject=f"{settings.EMAIL_SUBJECT_PREFIX}{email.subject}",
-                    message=email.body,
+                    message=email_body_with_signature,
                     from_email=settings.DEFAULT_FROM_EMAIL,
                     recipient_list=[candidate.email],
                     fail_silently=False,
