@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ template_data.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <h1 class="h3 mb-4">🎯 Job Recommendations for You</h1>
+            
+            {% if not template_data.has_skills %}
+                <div class="alert alert-info" role="alert">
+                    <h4 class="alert-heading">Add Your Skills to Get Recommendations!</h4>
+                    <p>We need to know your skills to recommend relevant jobs. Please add your skills to your profile first.</p>
+                    <hr>
+                    <p class="mb-0">
+                        <a class="btn btn-primary" href="{% url 'applicant:create_profile' %}">Add Skills to Profile</a>
+                    </p>
+                </div>
+            {% elif template_data.total_recommendations == 0 %}
+                <div class="alert alert-warning" role="alert">
+                    <h4 class="alert-heading">No Matching Jobs Found</h4>
+                    <p>We couldn't find any jobs that match your skills with the current criteria (minimum {{ template_data.min_matching_skills }} matching skills).</p>
+                    <hr>
+                    <p class="mb-0">Try adjusting the filter or check back later for new opportunities!</p>
+                </div>
+            {% else %}
+                <!-- Filter Options -->
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">Filter Recommendations</h5>
+                                <form method="get" class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="min_skills" class="form-label">Minimum Matching Skills</label>
+                                        <select name="min_skills" id="min_skills" class="form-select">
+                                            <option value="1" {% if template_data.min_matching_skills == 1 %}selected{% endif %}>At least 1 skill</option>
+                                            <option value="2" {% if template_data.min_matching_skills == 2 %}selected{% endif %}>At least 2 skills</option>
+                                            <option value="3" {% if template_data.min_matching_skills == 3 %}selected{% endif %}>At least 3 skills</option>
+                                            <option value="4" {% if template_data.min_matching_skills == 4 %}selected{% endif %}>At least 4 skills</option>
+                                            <option value="5" {% if template_data.min_matching_skills == 5 %}selected{% endif %}>At least 5 skills</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="limit" class="form-label">Max Results</label>
+                                        <select name="limit" id="limit" class="form-select">
+                                            <option value="10">10 jobs</option>
+                                            <option value="20" selected>20 jobs</option>
+                                            <option value="50">50 jobs</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-12">
+                                        <button type="submit" class="btn btn-primary">Apply Filters</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Your Skills Summary -->
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">Your Skills</h5>
+                                <div class="d-flex flex-wrap gap-2">
+                                    {% for skill in template_data.applicant_skills %}
+                                        <span class="badge bg-secondary">{{ skill.skill_name }} ({{ skill.proficiency_level }})</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results Summary -->
+                <div class="alert alert-success" role="alert">
+                    <strong>{{ template_data.total_recommendations }}</strong> job{% if template_data.total_recommendations != 1 %}s{% endif %} found matching your skills!
+                </div>
+
+                <!-- Job Recommendations -->
+                <div class="row">
+                    {% for job_data in template_data.jobs_with_matching_skills %}
+                        <div class="col-md-12 mb-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <h5 class="card-title">
+                                                <a href="{% url 'job:job_detail' job_data.job.pk %}" class="text-decoration-none">
+                                                    {{ job_data.job.title }}
+                                                </a>
+                                            </h5>
+                                            <h6 class="card-subtitle mb-2 text-muted">{{ job_data.job.company }}</h6>
+                                            <p class="text-muted mb-2">
+                                                <i class="bi bi-geo-alt"></i> {{ job_data.job.location }}
+                                                <span class="ms-3"><i class="bi bi-briefcase"></i> {{ job_data.job.get_job_type_display }}</span>
+                                            </p>
+                                            <p class="card-text">{{ job_data.job.description|truncatewords:30 }}</p>
+                                            
+                                            <!-- Matching Skills -->
+                                            <div class="mb-2">
+                                                <strong>Matching Skills ({{ job_data.matching_count }}/{{ job_data.total_required_skills }}):</strong>
+                                                <div class="d-flex flex-wrap gap-1 mt-1">
+                                                    {% for skill in job_data.matching_skills %}
+                                                        <span class="badge bg-success">{{ skill }}</span>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                            
+                                            {% if job_data.job.salary_min and job_data.job.salary_max %}
+                                                <p class="text-success fw-bold mb-2">
+                                                    💰 ${{ job_data.job.salary_min|floatformat:0 }} - ${{ job_data.job.salary_max|floatformat:0 }} {{ job_data.job.salary_currency }}
+                                                </p>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-4 text-end">
+                                            <div class="mb-3">
+                                                <div class="text-success fw-bold">
+                                                    {{ job_data.matching_count }} skill match{% if job_data.matching_count != 1 %}es{% endif %}
+                                                </div>
+                                                <small class="text-muted">Posted {{ job_data.job.created_at|timesince }} ago</small>
+                                            </div>
+                                            <div class="d-grid gap-2">
+                                                <a href="{% url 'job:job_detail' job_data.job.pk %}" class="btn btn-outline-primary">View Details</a>
+                                                <a href="{% url 'job:job_detail' job_data.job.pk %}#apply" class="btn btn-primary">Apply Now</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

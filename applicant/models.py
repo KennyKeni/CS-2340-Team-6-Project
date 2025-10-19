@@ -18,6 +18,44 @@ class Applicant(models.Model):
     # TODO Include fields for resume etc, but files should be managed by an s3 bucket
     resume = models.CharField(max_length=255, blank=True, null=True)  # Link
 
+    def get_job_recommendations(self, min_matching_skills=1):
+        """
+        Get job recommendations based on matching skills.
+        
+        Args:
+            min_matching_skills (int): Minimum number of matching skills required
+        
+        Returns:
+            QuerySet: JobPosting objects that match the criteria
+        """
+        from job.models import JobPosting, JobSkill
+        from django.db.models import Count, Q
+        
+        # Get all skill names of this applicant
+        applicant_skill_names = self.skills.values_list('skill_name', flat=True)
+        
+        if not applicant_skill_names:
+            return JobPosting.objects.none()
+        
+        # Find jobs that have at least min_matching_skills in common
+        recommended_jobs = JobPosting.objects.filter(
+            is_active=True,
+            required_skills__skill_name__in=applicant_skill_names
+        ).annotate(
+            matching_skills_count=Count('required_skills__skill_name', distinct=True)
+        ).filter(
+            matching_skills_count__gte=min_matching_skills
+        ).order_by('-matching_skills_count', '-created_at')
+        
+        # Exclude jobs the applicant has already applied to
+        applied_job_ids = self.account.job_applications.values_list('job_id', flat=True)
+        recommended_jobs = recommended_jobs.exclude(id__in=applied_job_ids)
+        
+        return recommended_jobs
+
+    def __str__(self):
+        return f"{self.account.get_full_name()} - Applicant"
+
 
 class WorkExperience(models.Model):
     applicant = models.ForeignKey(

@@ -436,3 +436,47 @@ def view_profile(request):
         "links": applicant.links.all(),
     }
     return render(request, 'applicant/view_profile.html', {'template_data': template_data})
+
+
+@login_required
+@applicant_required
+def job_recommendations(request):
+    """View to display job recommendations for the logged-in applicant"""
+    applicant = request.user.applicant
+    
+    # Get configurable minimum matching skills from query parameter (default: 1)
+    min_matching_skills = int(request.GET.get('min_skills', 1))
+    
+    # Get maximum recommendations to display (default: 20)
+    limit = int(request.GET.get('limit', 20))
+    
+    # Get job recommendations
+    recommended_jobs = applicant.get_job_recommendations(min_matching_skills=min_matching_skills)[:limit]
+    
+    # Get applicant's skills for display
+    applicant_skills = applicant.skills.all()
+    
+    # Annotate each job with matching skills for display
+    jobs_with_matching_skills = []
+    for job in recommended_jobs:
+        job_skill_names = set(job.required_skills.values_list('skill_name', flat=True))
+        applicant_skill_names = set(applicant_skills.values_list('skill_name', flat=True))
+        matching_skills = job_skill_names.intersection(applicant_skill_names)
+        
+        jobs_with_matching_skills.append({
+            'job': job,
+            'matching_skills': list(matching_skills),
+            'matching_count': len(matching_skills),
+            'total_required_skills': job.required_skills.count()
+        })
+    
+    template_data = {
+        "title": "Job Recommendations · DevJobs",
+        "jobs_with_matching_skills": jobs_with_matching_skills,
+        "applicant_skills": applicant_skills,
+        "min_matching_skills": min_matching_skills,
+        "total_recommendations": len(jobs_with_matching_skills),
+        "has_skills": applicant_skills.exists(),
+    }
+    
+    return render(request, 'applicant/job_recommendations.html', {'template_data': template_data})

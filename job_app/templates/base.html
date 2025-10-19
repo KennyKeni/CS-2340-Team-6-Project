@@ -35,6 +35,9 @@
               <a href="{% url 'job:search_jobs' %}" class="btn btn-outline-secondary btn-sm">
                 <i class="bi bi-briefcase"></i> Jobs
               </a>
+              <a href="{% url 'applicant:job_recommendations' %}" class="btn btn-outline-success btn-sm">
+                <i class="bi bi-lightbulb"></i> Recommendations
+              </a>
               <a href="{% url 'applicant:applications' %}" class="btn btn-outline-info btn-sm">
                 <i class="bi bi-file-earmark-text"></i> My Applications
               </a>
@@ -47,6 +50,9 @@
               </a>
               <a href="{% url 'recruiter:jobs' %}" class="btn btn-outline-info btn-sm">
                 <i class="bi bi-briefcase-fill"></i> My Job Postings
+              </a>
+              <a href="{% url 'recruiter:email_history' %}" class="btn btn-outline-success btn-sm">
+                <i class="bi bi-envelope-check"></i> Email History
               </a>
             {% endif %}
             <a href="{% url 'account:logout' %}" class="btn btn-outline-danger btn-sm">

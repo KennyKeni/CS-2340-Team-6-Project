@@ -76,3 +76,24 @@ class JobApplication(models.Model):
     
     def __str__(self):
         return f"{self.applicant.get_full_name()} applied to {self.job.title}"
+
+
+class JobSkill(models.Model):
+    """Required skills for a job posting"""
+    job = models.ForeignKey(JobPosting, on_delete=models.CASCADE, related_name='required_skills')
+    skill_name = models.CharField(max_length=100)
+    importance_level = models.CharField(
+        max_length=20,
+        choices=[
+            ('required', 'Required'),
+            ('preferred', 'Preferred'),
+            ('nice_to_have', 'Nice to Have'),
+        ],
+        default='required'
+    )
+
+    class Meta:
+        unique_together = ['job', 'skill_name']
+
+    def __str__(self):
+        return f"{self.job.title} - {self.skill_name}"

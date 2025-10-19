@@ -76,6 +76,49 @@
       </div>
       {% endif %}
 
+      <!-- Required Skills -->
+      {% if job.required_skills.exists %}
+      <div class="card mb-4">
+        <div class="card-header">
+          <h5 class="mb-0">Required Skills</h5>
+        </div>
+        <div class="card-body">
+          {% load applicant_utils %}
+          {% if user.is_authenticated and user|is_applicant %}
+            {% with applicant_skills=user.applicant.skills.all %}
+              <div class="mb-3">
+                <small class="text-muted">Skills matching your profile are highlighted in green:</small>
+              </div>
+              <div class="d-flex flex-wrap gap-2">
+                {% for job_skill in job.required_skills.all %}
+                  {% if applicant_skills|has_skill:job_skill.skill_name %}
+                    <span class="badge bg-success fs-6">
+                      ✓ {{ job_skill.skill_name }}
+                      <small>({{ job_skill.get_importance_level_display }})</small>
+                    </span>
+                  {% else %}
+                    <span class="badge bg-secondary fs-6">
+                      {{ job_skill.skill_name }}
+                      <small>({{ job_skill.get_importance_level_display }})</small>
+                    </span>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            {% endwith %}
+          {% else %}
+            <div class="d-flex flex-wrap gap-2">
+              {% for job_skill in job.required_skills.all %}
+                <span class="badge bg-secondary fs-6">
+                  {{ job_skill.skill_name }}
+                  <small>({{ job_skill.get_importance_level_display }})</small>
+                </span>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
       <!-- Benefits -->
       {% if job.benefits %}
       <div class="card mb-4">

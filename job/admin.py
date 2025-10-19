@@ -1,5 +1,10 @@
 from django.contrib import admin
-from .models import JobPosting, JobApplication
+from .models import JobPosting, JobApplication, JobSkill
+
+
+class JobSkillInline(admin.TabularInline):
+    model = JobSkill
+    extra = 3
 
 
 @admin.register(JobPosting)
@@ -8,6 +13,14 @@ class JobPostingAdmin(admin.ModelAdmin):
     list_filter = ('job_type', 'is_active', 'created_at')
     search_fields = ('title', 'company', 'location', 'owner__username')
     readonly_fields = ('created_at', 'updated_at')
+    inlines = [JobSkillInline]
+
+
+@admin.register(JobSkill)
+class JobSkillAdmin(admin.ModelAdmin):
+    list_display = ('skill_name', 'job', 'importance_level')
+    list_filter = ('importance_level',)
+    search_fields = ('skill_name', 'job__title')
 
 
 @admin.register(JobApplication)
