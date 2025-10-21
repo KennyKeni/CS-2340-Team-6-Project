@@ -1,5 +1,12 @@
 from django.contrib import admin
-from .models import Application, Applicant, WorkExperience, Education, Skill, Link
+from .models import Application, Applicant, WorkExperience, Education, Skill, Link, ProfilePrivacySettings
+
+
+@admin.register(ProfilePrivacySettings)
+class ProfilePrivacySettingsAdmin(admin.ModelAdmin):
+    list_display = ('applicant', 'visible_to_recruiters', 'show_email', 'show_phone', 'show_resume', 'show_gpa')
+    list_filter = ('visible_to_recruiters', 'show_email', 'show_phone', 'show_resume')
+    search_fields = ('applicant__account__username', 'applicant__account__email')
 
 
 @admin.register(Applicant)

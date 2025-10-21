@@ -6,6 +6,39 @@ from django.db import models
 from account.models import Account
 
 
+class ProfilePrivacySettings(models.Model):
+    """Privacy settings for applicant profiles - controls what recruiters can see"""
+    applicant = models.OneToOneField(
+        'Applicant',
+        on_delete=models.CASCADE,
+        related_name='privacy_settings',
+        primary_key=True,
+    )
+    # Contact Information
+    show_email = models.BooleanField(default=True, help_text="Allow recruiters to see your email")
+    show_phone = models.BooleanField(default=True, help_text="Allow recruiters to see your phone number")
+    show_location = models.BooleanField(default=True, help_text="Allow recruiters to see your location (city, state, country)")
+    
+    # Professional Information
+    show_resume = models.BooleanField(default=True, help_text="Allow recruiters to see your resume")
+    show_headline = models.BooleanField(default=True, help_text="Allow recruiters to see your professional headline")
+    show_skills = models.BooleanField(default=True, help_text="Allow recruiters to see your skills")
+    show_work_experience = models.BooleanField(default=True, help_text="Allow recruiters to see your work experience")
+    show_education = models.BooleanField(default=True, help_text="Allow recruiters to see your education")
+    show_links = models.BooleanField(default=True, help_text="Allow recruiters to see your portfolio/social links")
+    
+    # Detailed Settings
+    show_gpa = models.BooleanField(default=True, help_text="Allow recruiters to see your GPA")
+    show_current_employment = models.BooleanField(default=True, help_text="Allow recruiters to see your current job status")
+    show_current_education = models.BooleanField(default=True, help_text="Allow recruiters to see your current education status")
+    
+    # Overall Visibility
+    visible_to_recruiters = models.BooleanField(default=True, help_text="Make profile visible in recruiter searches")
+    
+    def __str__(self):
+        return f"Privacy Settings for {self.applicant.account.get_full_name()}"
+
+
 class Applicant(models.Model):
     account = models.OneToOneField(
         primary_key=True,
@@ -17,6 +50,11 @@ class Applicant(models.Model):
 
     # TODO Include fields for resume etc, but files should be managed by an s3 bucket
     resume = models.CharField(max_length=255, blank=True, null=True)  # Link
+
+    def get_or_create_privacy_settings(self):
+        """Get or create privacy settings for this applicant"""
+        settings, created = ProfilePrivacySettings.objects.get_or_create(applicant=self)
+        return settings
 
     def get_job_recommendations(self, min_matching_skills=1):
         """

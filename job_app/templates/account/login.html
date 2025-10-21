@@ -17,22 +17,41 @@
           {% csrf_token %}
           <div class="mb-3">
             <label for="id_username" class="form-label">Username</label>
-            <input type="text" class="form-control" id="id_username" name="username" required>
+            <input
+              type="text"
+              class="form-control"
+              id="id_username"
+              name="username"
+              required
+            />
           </div>
-          
+
           <div class="mb-3">
             <label for="id_password" class="form-label">Password</label>
-            <input type="password" class="form-control" id="id_password" name="password" required>
+            <input
+              type="password"
+              class="form-control"
+              id="id_password"
+              name="password"
+              required
+            />
           </div>
 
           <div class="d-grid mb-3">
-            <button type="submit" class="btn btn-primary btn-lg">Sign In</button>
+            <button type="submit" class="btn btn-primary btn-lg">
+              Sign In
+            </button>
           </div>
         </form>
 
         <div class="text-center">
-          <p class="mb-0">Don't have an account? 
-            <a href="{% url 'account:signup' %}" class="text-primary fw-semibold text-decoration-none">Sign up here</a>
+          <p class="mb-0">
+            Don't have an account?
+            <a
+              href="{% url 'account:signup' %}"
+              class="text-primary fw-semibold text-decoration-none"
+              >Sign up here</a
+            >
           </p>
         </div>
       </div>
@@ -41,47 +60,45 @@
 </div>
 
 <script>
-document.getElementById('loginForm').addEventListener('submit', async function(e) {
-  e.preventDefault();
-  
-  const formData = new FormData(this);
-  const data = Object.fromEntries(formData.entries());
-  
-  try {
-      const response = await fetch('{% url "account:login" %}', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-      },
-      body: JSON.stringify(data)
-    });
-    
-    const result = await response.json();
-    
-    if (result.success) {
-      // Redirect based on user type
-      if (result.user_type === 'applicant') {
-        window.location.href = '{% url "applicant:create_profile" %}';
-      } else if (result.user_type === 'recruiter') {
-        window.location.href = '{% url "home:index" %}';
-      } else {
-        window.location.href = '{% url "home:index" %}';
+  document
+    .getElementById("loginForm")
+    .addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      const formData = new FormData(this);
+      const data = Object.fromEntries(formData.entries());
+
+      try {
+        const response = await fetch('{% url "account:login" %}', {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")
+              .value,
+          },
+          body: JSON.stringify(data),
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          // Redirect to home page for all users after successful login
+          window.location.href = '{% url "home:index" %}';
+        } else {
+          // Show error message
+          const errorDiv = document.createElement("div");
+          errorDiv.className = "alert alert-danger mt-3";
+          errorDiv.textContent =
+            result.error || "Login failed. Please try again.";
+          this.appendChild(errorDiv);
+        }
+      } catch (error) {
+        console.error("Error:", error);
+        const errorDiv = document.createElement("div");
+        errorDiv.className = "alert alert-danger mt-3";
+        errorDiv.textContent = "An error occurred. Please try again.";
+        this.appendChild(errorDiv);
       }
-    } else {
-      // Show error message
-      const errorDiv = document.createElement('div');
-      errorDiv.className = 'alert alert-danger mt-3';
-      errorDiv.textContent = result.error || 'Login failed. Please try again.';
-      this.appendChild(errorDiv);
-    }
-  } catch (error) {
-    console.error('Error:', error);
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'alert alert-danger mt-3';
-    errorDiv.textContent = 'An error occurred. Please try again.';
-    this.appendChild(errorDiv);
-  }
-});
+    });
 </script>
 {% endblock %}
