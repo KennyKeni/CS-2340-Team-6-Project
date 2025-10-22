@@ -1,5 +1,7 @@
 <!DOCTYPE html>
 {% load static %}
+{% load applicant_utils %}
+{% load recruiter_utils %}
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -26,8 +28,6 @@
         <div class="d-flex align-items-center gap-3">
           {% if user.is_authenticated %}
             <span class="text-muted small">Welcome, {{ user.first_name|default:user.username }}!</span>
-            {% load applicant_utils %}
-            {% load recruiter_utils %}
             
             <!-- Notifications dropdown -->
             <div class="dropdown">
