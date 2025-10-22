@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Recruiter, CandidateEmail
+from .models import Recruiter, CandidateEmail, Notification, Message, SavedSearch
 
 
 @admin.register(Recruiter)
