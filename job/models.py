@@ -4,7 +4,7 @@ from account.models import Account
 
 
 class JobPosting(models.Model):
-    """Job posting model"""
+    """Job posting model with geographic coordinates for map view"""
     owner = models.ForeignKey(
         Account,
         on_delete=models.CASCADE,
@@ -13,6 +13,11 @@ class JobPosting(models.Model):
     title = models.CharField(max_length=200)
     company = models.CharField(max_length=200, default="")
     location = models.CharField(max_length=200, default="")
+
+    # 🌍 Added for User Story 7–9
+    latitude = models.FloatField(null=True, blank=True, help_text="Latitude for map display")
+    longitude = models.FloatField(null=True, blank=True, help_text="Longitude for map display")
+
     job_type = models.CharField(
         max_length=50,
         choices=[
@@ -47,10 +52,9 @@ class JobApplication(models.Model):
     """Job application model with personalized notes"""
     job = models.ForeignKey(JobPosting, on_delete=models.CASCADE, related_name='job_applications')
     applicant = models.ForeignKey(
-        Account, 
-        on_delete=models.CASCADE, 
+        Account,
+        on_delete=models.CASCADE,
         related_name='job_applications',
-# Note: limit_choices_to removed as user_type field no longer exists
     )
     personalized_note = models.TextField(
         blank=True,
@@ -69,11 +73,11 @@ class JobApplication(models.Model):
     )
     applied_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         unique_together = ['job', 'applicant']
         ordering = ['-applied_at']
-    
+
     def __str__(self):
         return f"{self.applicant.get_full_name()} applied to {self.job.title}"
 

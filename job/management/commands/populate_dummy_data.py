@@ -490,6 +490,8 @@ class Command(BaseCommand):
                 'title': 'Senior Python Developer',
                 'company': 'TechCorp Solutions',
                 'location': 'San Francisco, CA',
+                'latitude': 37.7749,
+                'longitude': -122.4194,
                 'job_type': 'full-time',
                 'description': 'We are looking for a Senior Python Developer to join our growing team. You will be responsible for developing and maintaining our core backend services using Django, FastAPI, and modern Python frameworks.',
                 'requirements': '• 5+ years of Python development experience\n• Strong knowledge of Django and FastAPI\n• Experience with PostgreSQL and Redis\n• Familiarity with Docker and Kubernetes\n• Bachelor\'s degree in Computer Science or related field',
@@ -502,6 +504,8 @@ class Command(BaseCommand):
                 'title': 'Frontend React Developer',
                 'company': 'StartupXYZ',
                 'location': 'Remote',
+                'latitude': 39.8283,  # Center of continental US for remote role
+                'longitude': -98.5795,
                 'job_type': 'full-time',
                 'description': 'Join our dynamic startup as a Frontend React Developer. You will work on building beautiful, responsive user interfaces for our web applications.',
                 'requirements': '• 3+ years of React.js experience\n• Proficiency in TypeScript\n• Experience with modern CSS frameworks\n• Knowledge of state management (Redux, Zustand)\n• Understanding of RESTful APIs',
@@ -514,6 +518,8 @@ class Command(BaseCommand):
                 'title': 'DevOps Engineer',
                 'company': 'CloudTech Inc',
                 'location': 'Austin, TX',
+                'latitude': 30.2672,
+                'longitude': -97.7431,
                 'job_type': 'full-time',
                 'description': 'We need a DevOps Engineer to help us scale our infrastructure and improve our deployment processes. You will work with AWS, Docker, and Kubernetes.',
                 'requirements': '• 4+ years of DevOps experience\n• Strong AWS knowledge\n• Experience with Docker and Kubernetes\n• CI/CD pipeline experience\n• Infrastructure as Code (Terraform)',
@@ -526,6 +532,8 @@ class Command(BaseCommand):
                 'title': 'Data Scientist',
                 'company': 'DataInsights Co',
                 'location': 'New York, NY',
+                'latitude': 40.7128,
+                'longitude': -74.0060,
                 'job_type': 'full-time',
                 'description': 'Join our data science team to build machine learning models and extract insights from large datasets. You will work with Python, R, and modern ML frameworks.',
                 'requirements': '• PhD or Master\'s in Data Science, Statistics, or related field\n• 3+ years of machine learning experience\n• Proficiency in Python and R\n• Experience with TensorFlow or PyTorch\n• Strong statistical background',
@@ -538,6 +546,8 @@ class Command(BaseCommand):
                 'title': 'Full Stack Developer',
                 'company': 'InnovateTech',
                 'location': 'Seattle, WA',
+                'latitude': 47.6062,
+                'longitude': -122.3321,
                 'job_type': 'full-time',
                 'description': 'We are seeking a Full Stack Developer to work on our web applications. You will work with both frontend and backend technologies.',
                 'requirements': '• 3+ years of full-stack development experience\n• Proficiency in React and Python/Django\n• Experience with PostgreSQL\n• Understanding of RESTful API design\n• Strong problem-solving skills',
@@ -566,6 +576,17 @@ class Command(BaseCommand):
                         skill_name=skill_name,
                         importance_level='required'
                     )
+            else:
+                fields_to_update = []
+                for field, value in job_data.items():
+                    if getattr(job, field) != value:
+                        setattr(job, field, value)
+                        fields_to_update.append(field)
+                if job.owner != recruiter:
+                    job.owner = recruiter
+                    fields_to_update.append('owner')
+                if fields_to_update:
+                    job.save(update_fields=fields_to_update)
 
             jobs.append(job)
 
