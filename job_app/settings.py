@@ -144,3 +144,6 @@ EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 
 DEFAULT_FROM_EMAIL = f'DevJobs Platform <{os.getenv("EMAIL_HOST_USER", "noreply@devjobs.com")}>'
 EMAIL_SUBJECT_PREFIX = '[DevJobs] '
+
+GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
+
