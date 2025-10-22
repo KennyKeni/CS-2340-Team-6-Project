@@ -7,10 +7,13 @@ from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 
 from .decorators import applicant_required
 from .models import Applicant, Application, Education, Link, Skill, WorkExperience
 from applicant.utils import is_applicant
+from recruiter.models import Message, Notification
+from utils.messaging import get_messages_context
 
 User = get_user_model()
 
@@ -480,3 +483,48 @@ def job_recommendations(request):
     }
     
     return render(request, 'applicant/job_recommendations.html', {'template_data': template_data})
+
+
+@login_required
+def messages_list(request):
+    """View to show all conversations for the current user (applicant version)"""
+    # Get messaging context from shared utility
+    context = get_messages_context(request)
+
+    # Add template-specific data
+    context['template_data'] = {
+        'title': 'Message History · DevJobs'
+    }
+
+    return render(request, 'applicant/messages.html', context)
+
+
+@login_required
+def notifications(request):
+    """View to show all notifications for the current user (applicant version)"""
+    notifications = Notification.objects.filter(
+        recipient=request.user
+    ).select_related('sender', 'related_job', 'related_application', 'related_message').order_by('-created_at')
+    
+    # Mark notifications as read when viewed
+    notifications.filter(is_read=False).update(is_read=True)
+    
+    # Pagination
+    paginator = Paginator(notifications, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'notifications': page_obj,
+        'template_data': {
+            'title': 'Notifications · DevJobs'
+        }
+    }
+    return render(request, 'applicant/notifications.html', context)
+
+
+@login_required
+def get_unread_notifications_count(request):
+    """API endpoint to get unread notifications count for applicants"""
+    count = Notification.objects.filter(recipient=request.user, is_read=False).count()
+    return JsonResponse({'count': count})

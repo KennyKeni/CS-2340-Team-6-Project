@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load recruiter_utils %}
+
+{% block content %}
+<div class="row">
+  <div class="col-12">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2><i class="bi bi-bell"></i> Notifications</h2>
+      <div class="btn-group" role="group">
+        <a href="{% url 'recruiter:messages' %}" class="btn btn-outline-primary">
+          <i class="bi bi-envelope"></i> Messages
+        </a>
+        {% if user|is_recruiter %}
+        <a href="{% url 'recruiter:saved_searches' %}" class="btn btn-outline-secondary">
+          <i class="bi bi-bookmark"></i> Saved Searches
+        </a>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if notifications %}
+      <div class="list-group">
+        {% for notification in notifications %}
+        <div class="list-group-item {% if not notification.is_read %}list-group-item-primary{% endif %}">
+          <div class="d-flex w-100 justify-content-between">
+            <div class="flex-grow-1">
+              <h5 class="mb-1">
+                <i class="bi bi-{% if notification.notification_type == 'message' %}envelope{% elif notification.notification_type == 'saved_search_match' %}search{% elif notification.notification_type == 'application_update' %}file-earmark-text{% else %}bell{% endif %}"></i>
+                {{ notification.title }}
+              </h5>
+              <p class="mb-1">{{ notification.message }}</p>
+              
+              {% if notification.related_job %}
+              <small class="text-muted">
+                <i class="bi bi-briefcase"></i> Related to: <a href="{% url 'job:job_detail' notification.related_job.id %}">{{ notification.related_job.title }}</a>
+              </small>
+              {% endif %}
+              
+              {% if notification.related_message %}
+              <small class="text-muted">
+                <i class="bi bi-envelope"></i> <a href="{% url 'recruiter:messages' %}">View Message</a>
+              </small>
+              {% endif %}
+              
+              {% if notification.notification_type == 'saved_search_match' %}
+              <small class="text-muted">
+                <i class="bi bi-bookmark"></i> <a href="{% url 'recruiter:saved_searches' %}">View Saved Searches</a>
+              </small>
+              {% endif %}
+            </div>
+            <small class="text-muted">{{ notification.created_at|date:"M d, Y H:i" }}</small>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Pagination -->
+      {% if notifications.has_other_pages %}
+      <nav aria-label="Notifications pagination" class="mt-4">
+        <ul class="pagination justify-content-center">
+          {% if notifications.has_previous %}
+          <li class="page-item">
+            <a class="page-link" href="?page=1">&laquo; First</a>
+          </li>
+          <li class="page-item">
+            <a class="page-link" href="?page={{ notifications.previous_page_number }}">Previous</a>
+          </li>
+          {% endif %}
+
+          <li class="page-item active">
+            <span class="page-link">
+              Page {{ notifications.number }} of {{ notifications.paginator.num_pages }}
+            </span>
+          </li>
+
+          {% if notifications.has_next %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ notifications.next_page_number }}">Next</a>
+          </li>
+          <li class="page-item">
+            <a class="page-link" href="?page={{ notifications.paginator.num_pages }}">Last &raquo;</a>
+          </li>
+          {% endif %}
+        </ul>
+      </nav>
+      {% endif %}
+
+    {% else %}
+      <div class="text-center py-5">
+        <i class="bi bi-bell-slash display-1 text-muted"></i>
+        <h3 class="text-muted mt-3">No Notifications</h3>
+        <p class="text-muted">You don't have any notifications yet.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

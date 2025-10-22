@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load applicant_utils %}
+
+{% block content %}
+<div class="row">
+  <div class="col-12">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2><i class="bi bi-chat-text"></i> Message History</h2>
+      <div class="btn-group" role="group">
+        <a href="{% url 'applicant:notifications' %}" class="btn btn-outline-secondary">
+          <i class="bi bi-bell"></i> Notifications
+        </a>
+        <a href="{% url 'applicant:job_recommendations' %}" class="btn btn-outline-secondary">
+          <i class="bi bi-lightbulb"></i> Job Recommendations
+        </a>
+      </div>
+    </div>
+
+    {% if conversations %}
+      <div class="row">
+        <!-- Conversations List -->
+        <div class="col-md-4">
+          <div class="card">
+            <div class="card-header">
+              <h6 class="mb-0"><i class="bi bi-people"></i> Conversations</h6>
+            </div>
+            <div class="card-body p-0">
+              <div class="list-group list-group-flush">
+                {% for conversation in conversations %}
+                <a href="?partner_id={{ conversation.partner.id }}" 
+                   class="list-group-item list-group-item-action {% if conversation.is_active %}active{% endif %}">
+                  <div class="d-flex w-100 justify-content-between">
+                    <div class="flex-grow-1">
+                      <h6 class="mb-1">
+                        {{ conversation.partner.get_full_name|default:conversation.partner.username }}
+                      </h6>
+                      {% if conversation.latest_message %}
+                      <p class="mb-1 text-muted">{{ conversation.latest_message.subject|truncatechars:30 }}</p>
+                      <small class="text-muted">
+                        {% if conversation.latest_message.sender == user %}
+                          You: {{ conversation.latest_message.body|truncatechars:40 }}
+                        {% else %}
+                          {{ conversation.latest_message.body|truncatechars:40 }}
+                        {% endif %}
+                      </small>
+                      {% endif %}
+                    </div>
+                    <div class="text-end">
+                      {% if conversation.latest_message %}
+                      <small class="text-muted">{{ conversation.latest_message.created_at|date:"M d" }}</small>
+                      {% endif %}
+                      {% if conversation.unread_count > 0 %}
+                      <br><span class="badge bg-primary">{{ conversation.unread_count }}</span>
+                      {% endif %}
+                    </div>
+                  </div>
+                </a>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Selected Conversation -->
+        <div class="col-md-8">
+          {% if selected_conversation %}
+          <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <h6 class="mb-0">
+                <i class="bi bi-person"></i> {{ selected_conversation.partner.get_full_name|default:selected_conversation.partner.username }}
+              </h6>
+              <a href="{% url 'recruiter:send_message' selected_conversation.partner.id %}" class="btn btn-sm btn-primary">
+                <i class="bi bi-reply"></i> Reply
+              </a>
+            </div>
+            <div class="card-body" style="height: 400px; overflow-y: auto;">
+              {% for message in selected_conversation.messages %}
+              <div class="d-flex {% if message.sender == user %}justify-content-end{% else %}justify-content-start{% endif %} mb-3">
+                <div class="message-bubble {% if message.sender == user %}bg-primary text-white{% else %}bg-light{% endif %} p-3 rounded" style="max-width: 70%;">
+                  <div class="d-flex justify-content-between align-items-start mb-2">
+                    <strong class="small">
+                      {% if message.sender == user %}You{% else %}{{ message.sender.get_full_name|default:message.sender.username }}{% endif %}
+                    </strong>
+                    <small class="text-muted">{{ message.created_at|date:"M d, Y H:i" }}</small>
+                  </div>
+                  <h6 class="mb-2">{{ message.subject }}</h6>
+                  <p class="mb-1">{{ message.body|linebreaks }}</p>
+                  {% if message.related_job %}
+                  <small class="text-muted">
+                    <i class="bi bi-briefcase"></i> Related to: <a href="{% url 'job:job_detail' message.related_job.id %}" class="text-decoration-none">{{ message.related_job.title }}</a>
+                  </small>
+                  {% endif %}
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% else %}
+          <div class="card h-100">
+            <div class="card-body d-flex align-items-center justify-content-center">
+              <div class="text-center">
+                <i class="bi bi-chat-text display-1 text-muted"></i>
+                <h4 class="text-muted mt-3">Select a conversation</h4>
+                <p class="text-muted">Choose a conversation from the list to view messages.</p>
+              </div>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    {% else %}
+      <div class="text-center py-5">
+        <i class="bi bi-chat-text display-1 text-muted"></i>
+        <h3 class="text-muted mt-3">No Conversations</h3>
+        <p class="text-muted">You don't have any message conversations yet.</p>
+        <a href="{% url 'job:search_jobs' %}" class="btn btn-primary">
+          <i class="bi bi-briefcase"></i> Browse Jobs
+        </a>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<style>
+.message-bubble {
+  word-wrap: break-word;
+}
+</style>
+{% endblock %}
