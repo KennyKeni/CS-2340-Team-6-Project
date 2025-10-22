@@ -42,8 +42,11 @@
         </div>
       </div>
 
-      <div class="d-grid d-md-flex justify-content-md-center mt-3">
+      <div class="d-grid d-md-flex justify-content-md-center mt-3 gap-2">
         <button type="submit" class="btn btn-primary btn-lg px-4">Search</button>
+        <a href="{% url 'recruiter:save_search' %}?{{ request.GET.urlencode }}" class="btn btn-outline-secondary btn-lg px-4">
+          <i class="bi bi-bookmark"></i> Save Search
+        </a>
       </div>
     </form>
   </div>
@@ -130,11 +133,8 @@
                   <i class="bi bi-file-earmark-text"></i> Resume
                 </a>
               {% endif %}
-              <a class="btn btn-sm btn-primary" href="{% url 'recruiter:compose_email' c.account.id %}">
-                <i class="bi bi-envelope"></i> Send Email
-              </a>
-              <a class="btn btn-sm btn-outline-primary" href="mailto:{{ c.account.email }}">
-                <i class="bi bi-envelope-open"></i> Direct Email
+              <a class="btn btn-sm btn-success" href="{% url 'recruiter:send_message' c.account.id %}">
+                <i class="bi bi-chat"></i> Message
               </a>
             </div>
           </div>
