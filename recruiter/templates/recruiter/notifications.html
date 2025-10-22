@@ -42,6 +42,12 @@
                 <i class="bi bi-envelope"></i> <a href="{% url 'recruiter:messages' %}">View Message</a>
               </small>
               {% endif %}
+              
+              {% if notification.notification_type == 'saved_search_match' %}
+              <small class="text-muted">
+                <i class="bi bi-bookmark"></i> <a href="{% url 'recruiter:saved_searches' %}">View Saved Searches</a>
+              </small>
+              {% endif %}
             </div>
             <small class="text-muted">{{ notification.created_at|date:"M d, Y H:i" }}</small>
           </div>
