@@ -13,6 +13,7 @@ from .decorators import applicant_required
 from .models import Applicant, Application, Education, Link, Skill, WorkExperience
 from applicant.utils import is_applicant
 from recruiter.models import Message, Notification
+from utils.messaging import get_messages_context
 
 User = get_user_model()
 
@@ -487,73 +488,14 @@ def job_recommendations(request):
 @login_required
 def messages_list(request):
     """View to show all conversations for the current user (applicant version)"""
-    # Get all unique conversations (people the user has messaged or been messaged by)
-    sent_to = Message.objects.filter(sender=request.user).values_list('recipient', flat=True).distinct()
-    received_from = Message.objects.filter(recipient=request.user).values_list('sender', flat=True).distinct()
-    
-    # Get all conversation partners
-    all_conversation_partners = set(sent_to) | set(received_from)
-    
-    # Create conversation data with latest message and unread count
-    conversations = []
-    for partner_id in all_conversation_partners:
-        partner = User.objects.get(id=partner_id)
-        
-        # Get latest message in this conversation
-        latest_message = Message.objects.filter(
-            Q(sender=request.user, recipient=partner) | 
-            Q(sender=partner, recipient=request.user)
-        ).order_by('-created_at').first()
-        
-        # Count unread messages from this partner
-        unread_count = Message.objects.filter(
-            sender=partner, 
-            recipient=request.user, 
-            is_read=False
-        ).count()
-        
-        # Mark messages as read when viewing conversation
-        if request.GET.get('partner_id') == str(partner_id):
-            Message.objects.filter(
-                sender=partner, 
-                recipient=request.user, 
-                is_read=False
-            ).update(is_read=True)
-        
-        conversations.append({
-            'partner': partner,
-            'latest_message': latest_message,
-            'unread_count': unread_count,
-            'is_active': request.GET.get('partner_id') == str(partner_id)
-        })
-    
-    # Sort conversations by latest message date
-    conversations.sort(key=lambda x: x['latest_message'].created_at if x['latest_message'] else timezone.now() - timezone.timedelta(days=365), reverse=True)
-    
-    # Get messages for selected conversation
-    selected_conversation = None
-    if request.GET.get('partner_id'):
-        try:
-            partner = User.objects.get(id=request.GET.get('partner_id'))
-            conversation_messages = Message.objects.filter(
-                Q(sender=request.user, recipient=partner) | 
-                Q(sender=partner, recipient=request.user)
-            ).select_related('sender', 'recipient', 'related_job').order_by('created_at')
-            
-            selected_conversation = {
-                'partner': partner,
-                'messages': conversation_messages
-            }
-        except User.DoesNotExist:
-            pass
-    
-    context = {
-        'conversations': conversations,
-        'selected_conversation': selected_conversation,
-        'template_data': {
-            'title': 'Message History · DevJobs'
-        }
+    # Get messaging context from shared utility
+    context = get_messages_context(request)
+
+    # Add template-specific data
+    context['template_data'] = {
+        'title': 'Message History · DevJobs'
     }
+
     return render(request, 'applicant/messages.html', context)
 
 

@@ -48,10 +48,12 @@ def notify_saved_searches_on_skill_update(sender, instance, created, **kwargs):
     candidate = instance.applicant
     
     # Get all active saved searches that include this skill
-    saved_searches = SavedSearch.objects.filter(
-        is_active=True,
-        skills__contains=[instance.skill_name]
-    )
+    # Using Python-side filtering for SQLite compatibility
+    all_searches = SavedSearch.objects.filter(is_active=True)
+    saved_searches = [
+        search for search in all_searches
+        if instance.skill_name in search.skills
+    ]
     
     for search in saved_searches:
         # Check if candidate now matches search criteria
