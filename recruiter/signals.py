@@ -23,11 +23,12 @@ def notify_saved_searches_on_candidate_update(sender, instance, created, **kwarg
         # Check if candidate matches search criteria
         if matches_saved_search(instance, search):
             # Create notification for the recruiter
+            candidate_name = instance.account.get_full_name() or instance.account.username
             Notification.objects.create(
                 recipient=search.recruiter,
                 notification_type='saved_search_match',
-                title=f'New candidate matches "{search.name}"',
-                message=f'A new candidate has been found that matches your saved search criteria.',
+                title=f'New candidate "{candidate_name}" matches "{search.name}"',
+                message=f'Candidate {candidate_name} has been found that matches your saved search criteria for "{search.name}".',
                 related_job=None  # Could be enhanced to relate to specific jobs
             )
             
@@ -56,11 +57,12 @@ def notify_saved_searches_on_skill_update(sender, instance, created, **kwargs):
         # Check if candidate now matches search criteria
         if matches_saved_search(candidate, search):
             # Create notification for the recruiter
+            candidate_name = candidate.account.get_full_name() or candidate.account.username
             Notification.objects.create(
                 recipient=search.recruiter,
                 notification_type='saved_search_match',
-                title=f'Candidate updated - matches "{search.name}"',
-                message=f'A candidate you\'re tracking has updated their profile and now matches your saved search criteria.',
+                title=f'Candidate "{candidate_name}" updated - matches "{search.name}"',
+                message=f'Candidate {candidate_name} has updated their profile and now matches your saved search criteria for "{search.name}".',
                 related_job=None
             )
             
