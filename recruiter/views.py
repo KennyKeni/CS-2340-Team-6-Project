@@ -330,7 +330,7 @@ def send_message(request, recipient_id):
             )
             
             messages.success(request, f'Message sent to {recipient.get_full_name()}!')
-            return redirect('recruiter:notifications')
+            return redirect('recruiter:messages')
     else:
         form = MessageForm(sender=request.user)
     
