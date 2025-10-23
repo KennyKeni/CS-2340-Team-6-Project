@@ -1,9 +1,10 @@
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.utils import timezone
 from datetime import date, timedelta
 from recruiter.models import Recruiter
-from applicant.models import Applicant, WorkExperience, Education, Skill, Link
+from applicant.models import Applicant, WorkExperience, Education, Skill, Link, ProfilePrivacySettings
 from job.models import JobPosting, JobApplication, JobSkill
 
 User = get_user_model()
@@ -15,11 +16,16 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write(self.style.SUCCESS('Starting to populate dummy data...'))
 
+        # Create groups for role management
+        applicant_group, _ = Group.objects.get_or_create(name='applicant')
+        recruiter_group, _ = Group.objects.get_or_create(name='recruiter')
+        self.stdout.write(self.style.SUCCESS('Created user groups'))
+
         # Create recruiters
-        recruiters = self.create_recruiters()
+        recruiters = self.create_recruiters(recruiter_group)
 
         # Create applicants with complete profiles
-        applicants = self.create_applicants()
+        applicants = self.create_applicants(applicant_group)
 
         # Create job postings with skills
         jobs = self.create_jobs(recruiters)
@@ -43,7 +49,7 @@ class Command(BaseCommand):
         self.stdout.write('  Username: kenny_applicant    Password: password123')
         self.stdout.write(self.style.SUCCESS('\n' + '='*60))
 
-    def create_recruiters(self):
+    def create_recruiters(self, recruiter_group):
         self.stdout.write('Creating recruiters...')
         recruiters = []
 
@@ -55,12 +61,18 @@ class Command(BaseCommand):
                 'last_name': 'Recruiter',
                 'company': 'TechCorp Solutions',
                 'position': 'Lead Recruiter',
+                'phone_number': '415-555-1001',
                 'address': {
                     'street_address': '100 Tech Drive',
                     'city': 'San Francisco',
                     'state': 'CA',
                     'country': 'United States',
                     'zip_code': '94105',
+                },
+                'commute': {
+                    'preferred_commute_radius': 20.0,
+                    'preferred_commute_mode': 'driving',
+                    'preferred_commute_time': 30,
                 }
             },
             {
@@ -70,31 +82,41 @@ class Command(BaseCommand):
                 'last_name': 'Smith',
                 'company': 'TechCorp Solutions',
                 'position': 'Senior Technical Recruiter',
+                'phone_number': '415-555-1002',
                 'address': {
                     'street_address': '123 Business Ave',
                     'city': 'San Francisco',
                     'state': 'CA',
                     'country': 'United States',
                     'zip_code': '94105',
+                },
+                'commute': {
+                    'preferred_commute_radius': 15.0,
+                    'preferred_commute_mode': 'transit',
+                    'preferred_commute_time': 35,
                 }
             },
         ]
 
         for data in recruiter_data:
+            commute_data = data.pop('commute')
             user, created = User.objects.get_or_create(
                 username=data['username'],
                 defaults={
                     'email': data['email'],
                     'first_name': data['first_name'],
                     'last_name': data['last_name'],
+                    'phone_number': data.get('phone_number', ''),
                     'is_staff': True,
-                    **data['address']
+                    **data['address'],
+                    **commute_data
                 }
             )
 
             if created:
                 user.set_password('password123')
                 user.save()
+                user.groups.add(recruiter_group)
 
             recruiter, _ = Recruiter.objects.get_or_create(
                 account=user,
@@ -108,7 +130,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f'  Created {len(recruiters)} recruiters'))
         return recruiters
 
-    def create_applicants(self):
+    def create_applicants(self, applicant_group):
         self.stdout.write('Creating applicants with profiles...')
         applicants = []
 
@@ -127,6 +149,11 @@ class Command(BaseCommand):
                     'zip_code': '10001',
                 },
                 'phone_number': '555-0101',
+                'commute': {
+                    'preferred_commute_radius': 25.0,
+                    'preferred_commute_mode': 'transit',
+                    'preferred_commute_time': 45,
+                },
                 'work_experiences': [
                     {
                         'company': 'Tech Innovations Inc',
@@ -184,6 +211,11 @@ class Command(BaseCommand):
                     'zip_code': '78701',
                 },
                 'phone_number': '555-0102',
+                'commute': {
+                    'preferred_commute_radius': 30.0,
+                    'preferred_commute_mode': 'driving',
+                    'preferred_commute_time': 35,
+                },
                 'work_experiences': [
                     {
                         'company': 'CloudTech Inc',
@@ -231,6 +263,11 @@ class Command(BaseCommand):
                     'zip_code': '98101',
                 },
                 'phone_number': '555-0103',
+                'commute': {
+                    'preferred_commute_radius': 20.0,
+                    'preferred_commute_mode': 'bicycling',
+                    'preferred_commute_time': 40,
+                },
                 'work_experiences': [
                     {
                         'company': 'DesignCo',
@@ -277,6 +314,11 @@ class Command(BaseCommand):
                     'zip_code': '90001',
                 },
                 'phone_number': '555-0104',
+                'commute': {
+                    'preferred_commute_radius': 15.0,
+                    'preferred_commute_mode': 'driving',
+                    'preferred_commute_time': 30,
+                },
                 'work_experiences': [
                     {
                         'company': 'Creative Agency',
@@ -324,6 +366,11 @@ class Command(BaseCommand):
                     'zip_code': '02101',
                 },
                 'phone_number': '555-0105',
+                'commute': {
+                    'preferred_commute_radius': 10.0,
+                    'preferred_commute_mode': 'walking',
+                    'preferred_commute_time': 25,
+                },
                 'work_experiences': [
                     {
                         'company': 'DataInsights Co',
@@ -381,6 +428,11 @@ class Command(BaseCommand):
                     'zip_code': '30332',
                 },
                 'phone_number': '555-0106',
+                'commute': {
+                    'preferred_commute_radius': 25.0,
+                    'preferred_commute_mode': 'driving',
+                    'preferred_commute_time': 30,
+                },
                 'work_experiences': [
                     {
                         'company': 'Tech Company',
@@ -416,6 +468,7 @@ class Command(BaseCommand):
         ]
 
         for data in applicants_data:
+            commute_data = data.pop('commute', {})
             user, created = User.objects.get_or_create(
                 username=data['username'],
                 defaults={
@@ -423,18 +476,23 @@ class Command(BaseCommand):
                     'first_name': data['first_name'],
                     'last_name': data['last_name'],
                     'phone_number': data.get('phone_number', ''),
-                    **data['address']
+                    **data['address'],
+                    **commute_data
                 }
             )
 
             if created:
                 user.set_password('password123')
                 user.save()
+                user.groups.add(applicant_group)
 
-            applicant, _ = Applicant.objects.get_or_create(
+            applicant, applicant_created = Applicant.objects.get_or_create(
                 account=user,
                 defaults={'headline': data['headline']}
             )
+
+            if applicant_created:
+                ProfilePrivacySettings.objects.get_or_create(applicant=applicant)
 
             # Add work experiences
             for exp in data.get('work_experiences', []):
@@ -504,7 +562,7 @@ class Command(BaseCommand):
                 'title': 'Frontend React Developer',
                 'company': 'StartupXYZ',
                 'location': 'Remote',
-                'latitude': 39.8283,  # Center of continental US for remote role
+                'latitude': 39.8283,
                 'longitude': -98.5795,
                 'job_type': 'full-time',
                 'description': 'Join our dynamic startup as a Frontend React Developer. You will work on building beautiful, responsive user interfaces for our web applications.',
@@ -555,6 +613,216 @@ class Command(BaseCommand):
                 'salary_min': 90000,
                 'salary_max': 130000,
                 'skills': ['Python', 'Django', 'React', 'PostgreSQL', 'JavaScript'],
+            },
+            {
+                'title': 'Senior Software Engineer',
+                'company': 'Atlanta Tech Hub',
+                'location': 'Atlanta, GA',
+                'latitude': 33.7490,
+                'longitude': -84.3880,
+                'job_type': 'full-time',
+                'description': 'Join our rapidly growing tech company in the heart of Atlanta. We are building cutting-edge fintech solutions and need talented engineers.',
+                'requirements': '• 5+ years of software development experience\n• Strong knowledge of Java or Python\n• Experience with microservices architecture\n• AWS or Azure cloud experience\n• Bachelor\'s degree in Computer Science',
+                'benefits': '• Competitive salary\n• Health insurance\n• 401(k) matching\n• Stock options\n• Great office location in Midtown',
+                'salary_min': 110000,
+                'salary_max': 150000,
+                'skills': ['Java', 'Python', 'AWS', 'Microservices', 'PostgreSQL'],
+            },
+            {
+                'title': 'Frontend Developer',
+                'company': 'Buckhead Digital',
+                'location': 'Buckhead, Atlanta, GA',
+                'latitude': 33.8490,
+                'longitude': -84.3670,
+                'job_type': 'full-time',
+                'description': 'Looking for a creative frontend developer to build modern web applications. Work with the latest technologies in a collaborative environment.',
+                'requirements': '• 3+ years React experience\n• Strong CSS/SCSS skills\n• Experience with responsive design\n• Knowledge of accessibility standards\n• Portfolio required',
+                'benefits': '• Health and dental insurance\n• Flexible hours\n• Professional development\n• Modern office in Buckhead\n• Free parking',
+                'salary_min': 85000,
+                'salary_max': 115000,
+                'skills': ['React', 'TypeScript', 'CSS', 'JavaScript', 'HTML'],
+            },
+            {
+                'title': 'Machine Learning Engineer',
+                'company': 'Georgia Tech Research Institute',
+                'location': 'Georgia Tech, Atlanta, GA',
+                'latitude': 33.7756,
+                'longitude': -84.3963,
+                'job_type': 'full-time',
+                'description': 'Work on cutting-edge ML research and applications. Join a team of world-class researchers and engineers at Georgia Tech.',
+                'requirements': '• Master\'s or PhD in Computer Science, ML, or related field\n• 3+ years ML/AI experience\n• Strong Python and TensorFlow/PyTorch skills\n• Published research preferred\n• Experience with computer vision or NLP',
+                'benefits': '• Excellent benefits package\n• Research opportunities\n• Access to state-of-the-art facilities\n• Collaboration with faculty\n• Tuition assistance',
+                'salary_min': 100000,
+                'salary_max': 145000,
+                'skills': ['Python', 'Machine Learning', 'TensorFlow', 'PyTorch', 'Computer Vision'],
+            },
+            {
+                'title': 'Backend Developer',
+                'company': 'Decatur Software Solutions',
+                'location': 'Decatur, GA',
+                'latitude': 33.7748,
+                'longitude': -84.2963,
+                'job_type': 'full-time',
+                'description': 'Backend developer needed for growing SaaS company. Build scalable APIs and work with distributed systems.',
+                'requirements': '• 4+ years backend development\n• Node.js or Python expertise\n• Database design skills (SQL and NoSQL)\n• RESTful API design\n• Experience with cloud platforms',
+                'benefits': '• Competitive salary\n• Health benefits\n• Remote work options\n• Quarterly bonuses\n• Great team culture',
+                'salary_min': 95000,
+                'salary_max': 130000,
+                'skills': ['Node.js', 'Python', 'PostgreSQL', 'MongoDB', 'AWS'],
+            },
+            {
+                'title': 'DevOps Engineer',
+                'company': 'Sandy Springs Tech',
+                'location': 'Sandy Springs, GA',
+                'latitude': 33.9304,
+                'longitude': -84.3733,
+                'job_type': 'full-time',
+                'description': 'Looking for an experienced DevOps engineer to manage our cloud infrastructure and CI/CD pipelines.',
+                'requirements': '• 3+ years DevOps experience\n• Strong AWS or GCP knowledge\n• Docker and Kubernetes\n• Terraform or CloudFormation\n• Scripting (Python, Bash)',
+                'benefits': '• Competitive compensation\n• Full benefits package\n• Work from home flexibility\n• Training budget\n• Great location',
+                'salary_min': 105000,
+                'salary_max': 140000,
+                'skills': ['AWS', 'Kubernetes', 'Terraform', 'Docker', 'Python'],
+            },
+            {
+                'title': 'Mobile Developer (React Native)',
+                'company': 'Alpharetta Mobile Apps',
+                'location': 'Alpharetta, GA',
+                'latitude': 34.0754,
+                'longitude': -84.2941,
+                'job_type': 'full-time',
+                'description': 'Build cross-platform mobile applications using React Native. Join our innovative mobile development team.',
+                'requirements': '• 3+ years mobile development\n• Strong React Native experience\n• iOS and Android knowledge\n• Experience with mobile UI/UX\n• Published apps in app stores',
+                'benefits': '• Excellent salary\n• Health insurance\n• Stock options\n• Flexible schedule\n• Modern office',
+                'salary_min': 90000,
+                'salary_max': 125000,
+                'skills': ['React Native', 'JavaScript', 'iOS', 'Android', 'TypeScript'],
+            },
+            {
+                'title': 'Data Engineer',
+                'company': 'Atlanta Analytics Group',
+                'location': 'Downtown Atlanta, GA',
+                'latitude': 33.7537,
+                'longitude': -84.3863,
+                'job_type': 'full-time',
+                'description': 'Data engineer needed to build and maintain data pipelines and warehouse infrastructure.',
+                'requirements': '• 4+ years data engineering\n• Strong SQL and Python\n• ETL/ELT pipeline experience\n• Data warehouse design (Snowflake, Redshift)\n• Apache Spark or similar',
+                'benefits': '• Competitive pay\n• Full benefits\n• Remote options\n• Learning budget\n• Downtown location',
+                'salary_min': 100000,
+                'salary_max': 140000,
+                'skills': ['Python', 'SQL', 'Apache Spark', 'Snowflake', 'ETL'],
+            },
+            {
+                'title': 'UI/UX Designer',
+                'company': 'Creative Atlanta Studios',
+                'location': 'Ponce City Market, Atlanta, GA',
+                'latitude': 33.7725,
+                'longitude': -84.3655,
+                'job_type': 'full-time',
+                'description': 'Creative UI/UX designer to design beautiful and intuitive user experiences. Work in our cool office at Ponce City Market.',
+                'requirements': '• 3+ years UI/UX design experience\n• Strong Figma skills\n• Portfolio showcasing web and mobile design\n• User research experience\n• Understanding of frontend development',
+                'benefits': '• Great salary\n• Health benefits\n• Awesome office location\n• Creative freedom\n• Design conferences',
+                'salary_min': 80000,
+                'salary_max': 110000,
+                'skills': ['Figma', 'UI Design', 'UX Design', 'Adobe Creative Suite', 'Prototyping'],
+            },
+            {
+                'title': 'Security Engineer',
+                'company': 'SecureNet Atlanta',
+                'location': 'Marietta, GA',
+                'latitude': 33.9526,
+                'longitude': -84.5499,
+                'job_type': 'full-time',
+                'description': 'Join our cybersecurity team to protect our infrastructure and applications. Work on security architecture and incident response.',
+                'requirements': '• 4+ years security engineering\n• Security certifications (CISSP, CEH)\n• Penetration testing experience\n• Cloud security knowledge\n• Incident response skills',
+                'benefits': '• Excellent compensation\n• Full benefits\n• Security training\n• Certifications paid\n• Flexible work',
+                'salary_min': 110000,
+                'salary_max': 150000,
+                'skills': ['Cybersecurity', 'Penetration Testing', 'AWS Security', 'Python', 'Network Security'],
+            },
+            {
+                'title': 'Full Stack Engineer',
+                'company': 'Tech Square Innovations',
+                'location': 'Tech Square, Atlanta, GA',
+                'latitude': 33.7765,
+                'longitude': -84.3894,
+                'job_type': 'full-time',
+                'description': 'Full stack engineer to work on our SaaS platform. Great location in Tech Square near Georgia Tech.',
+                'requirements': '• 3+ years full stack development\n• React and Node.js\n• PostgreSQL or MySQL\n• RESTful API design\n• Git and Agile workflow',
+                'benefits': '• Competitive salary\n• Health and dental\n• Stock options\n• Great location\n• Startup culture',
+                'salary_min': 90000,
+                'salary_max': 125000,
+                'skills': ['React', 'Node.js', 'PostgreSQL', 'JavaScript', 'TypeScript'],
+            },
+            {
+                'title': 'Cloud Architect',
+                'company': 'Atlanta Cloud Solutions',
+                'location': 'Perimeter Center, Atlanta, GA',
+                'latitude': 33.9237,
+                'longitude': -84.3465,
+                'job_type': 'full-time',
+                'description': 'Senior cloud architect to design and implement cloud infrastructure for enterprise clients.',
+                'requirements': '• 6+ years cloud architecture\n• AWS Solutions Architect certification\n• Multi-cloud experience (AWS, Azure, GCP)\n• Infrastructure as Code expertise\n• Enterprise architecture experience',
+                'benefits': '• Excellent compensation package\n• Full benefits\n• Remote work options\n• Certification reimbursement\n• Career growth',
+                'salary_min': 130000,
+                'salary_max': 180000,
+                'skills': ['AWS', 'Azure', 'GCP', 'Terraform', 'Architecture'],
+            },
+            {
+                'title': 'QA Automation Engineer',
+                'company': 'Quality First Atlanta',
+                'location': 'Roswell, GA',
+                'latitude': 34.0232,
+                'longitude': -84.3615,
+                'job_type': 'full-time',
+                'description': 'QA automation engineer to build and maintain automated test frameworks. Ensure quality across our products.',
+                'requirements': '• 3+ years QA automation\n• Selenium, Cypress, or similar\n• Programming skills (Python, JavaScript)\n• CI/CD integration\n• API testing experience',
+                'benefits': '• Good salary\n• Health benefits\n• Flexible schedule\n• Remote options\n• Training opportunities',
+                'salary_min': 85000,
+                'salary_max': 115000,
+                'skills': ['Selenium', 'Python', 'JavaScript', 'Cypress', 'API Testing'],
+            },
+            {
+                'title': 'Product Manager',
+                'company': 'Atlanta Product Co',
+                'location': 'Midtown Atlanta, GA',
+                'latitude': 33.7900,
+                'longitude': -84.3859,
+                'job_type': 'full-time',
+                'description': 'Technical product manager to drive product strategy and work with engineering teams.',
+                'requirements': '• 4+ years product management\n• Technical background preferred\n• Experience with Agile\n• Strong communication skills\n• B2B SaaS experience',
+                'benefits': '• Competitive salary\n• Health benefits\n• Stock options\n• Great team\n• Impact on product',
+                'salary_min': 110000,
+                'salary_max': 145000,
+                'skills': ['Product Management', 'Agile', 'User Stories', 'Analytics', 'Roadmapping'],
+            },
+            {
+                'title': 'Site Reliability Engineer',
+                'company': 'Reliable Systems Atlanta',
+                'location': 'Dunwoody, GA',
+                'latitude': 33.9462,
+                'longitude': -84.3346,
+                'job_type': 'full-time',
+                'description': 'SRE to ensure the reliability and performance of our production systems. Build monitoring and automation.',
+                'requirements': '• 4+ years SRE or DevOps\n• Strong Linux/Unix skills\n• Monitoring tools (Prometheus, Grafana)\n• Scripting and automation\n• Incident management',
+                'benefits': '• Great compensation\n• Full benefits\n• On-call rotation pay\n• Remote flexibility\n• Learning budget',
+                'salary_min': 110000,
+                'salary_max': 145000,
+                'skills': ['Linux', 'Kubernetes', 'Prometheus', 'Python', 'AWS'],
+            },
+            {
+                'title': 'Blockchain Developer',
+                'company': 'Atlanta Blockchain Labs',
+                'location': 'Atlanta, GA',
+                'latitude': 33.7590,
+                'longitude': -84.3880,
+                'job_type': 'full-time',
+                'description': 'Blockchain developer to work on Web3 applications and smart contracts. Exciting startup in the crypto space.',
+                'requirements': '• 2+ years blockchain development\n• Solidity and smart contracts\n• Web3.js or ethers.js\n• DeFi protocol knowledge\n• Cryptography understanding',
+                'benefits': '• Competitive salary\n• Crypto bonuses\n• Health benefits\n• Remote work\n• Cutting-edge tech',
+                'salary_min': 100000,
+                'salary_max': 150000,
+                'skills': ['Solidity', 'Blockchain', 'Web3', 'Smart Contracts', 'Ethereum'],
             },
         ]
 

@@ -8,26 +8,42 @@
 
   <!-- Controls -->
   <div class="text-center mb-3">
-    <label for="radiusRange" class="form-label fw-bold me-3">
-      Distance: <span id="radiusValue">50</span> miles
-    </label>
-    <input type="range" id="radiusRange" min="10" max="3000" value="50" step="10"
-           class="form-range mb-2" style="width: 300px;">
-    <br>
-    <select id="commuteMode" class="form-select d-inline-block w-auto">
-      <option value="DRIVING">🚗 Drive</option>
-      <option value="TRANSIT">🚆 Transit</option>
-      <option value="WALKING">🚶 Walk</option>
-      <option value="BICYCLING">🚴 Bike</option>
-    </select>
-    <select id="commuteTime" class="form-select d-inline-block w-auto ms-2">
-      <option value="10">10 min</option>
-      <option value="20">20 min</option>
-      <option value="30" selected>30 min</option>
-      <option value="45">45 min</option>
-      <option value="60">1 hour</option>
-    </select>
-    <button id="locateBtn" class="btn btn-primary ms-3">📍 Use My Location</button>
+    <div class="d-flex justify-content-center align-items-center mb-3">
+      <label for="radiusRange" class="form-label fw-bold mb-0 me-2">
+        Distance: <span id="radiusValue">{{ user.preferred_commute_radius|default:25 }}</span> miles
+      </label>
+      <input type="range" id="radiusRange" min="5" max="200" value="{{ user.preferred_commute_radius|default:25 }}" step="5"
+             class="form-range" style="width: 300px;">
+    </div>
+    <div class="mb-2">
+      <select id="commuteMode" class="form-select d-inline-block w-auto">
+        <option value="DRIVING" {% if user.preferred_commute_mode|default:'driving' == 'driving' %}selected{% endif %}>🚗 Drive</option>
+        <option value="TRANSIT" {% if user.preferred_commute_mode == 'transit' %}selected{% endif %}>🚆 Transit</option>
+        <option value="WALKING" {% if user.preferred_commute_mode == 'walking' %}selected{% endif %}>🚶 Walk</option>
+        <option value="BICYCLING" {% if user.preferred_commute_mode == 'bicycling' %}selected{% endif %}>🚴 Bike</option>
+      </select>
+      <select id="commuteTime" class="form-select d-inline-block w-auto ms-2">
+        <option value="10" {% if user.preferred_commute_time == 10 %}selected{% endif %}>10 min</option>
+        <option value="20" {% if user.preferred_commute_time == 20 %}selected{% endif %}>20 min</option>
+        <option value="30" {% if user.preferred_commute_time|default:30 == 30 %}selected{% endif %}>30 min</option>
+        <option value="45" {% if user.preferred_commute_time == 45 %}selected{% endif %}>45 min</option>
+        <option value="60" {% if user.preferred_commute_time == 60 %}selected{% endif %}>1 hour</option>
+      </select>
+      <button id="locateBtn" class="btn btn-primary ms-3">📍 Use My Location</button>
+      {% if user.is_authenticated %}
+      <button id="savePrefsBtn" class="btn btn-success ms-2">💾 Save Preferences</button>
+      {% endif %}
+    </div>
+    <div>
+      <small class="text-muted me-2">Filter Mode:</small>
+      <div class="btn-group btn-group-sm" role="group">
+        <input type="radio" class="btn-check" name="filterMode" id="filterOr" value="or" checked>
+        <label class="btn btn-outline-secondary" for="filterOr">Either (OR)</label>
+        <input type="radio" class="btn-check" name="filterMode" id="filterAnd" value="and">
+        <label class="btn btn-outline-secondary" for="filterAnd">Both (AND)</label>
+      </div>
+      <small class="text-muted ms-2" id="filterExplanation">Show jobs within distance OR time</small>
+    </div>
   </div>
 
   <!-- Map -->
@@ -89,10 +105,33 @@
     const slider = document.getElementById("radiusRange");
     const label = document.getElementById("radiusValue");
     const locateBtn = document.getElementById("locateBtn");
+    const commuteMode = document.getElementById("commuteMode");
+    const commuteTime = document.getElementById("commuteTime");
+    const filterOr = document.getElementById("filterOr");
+    const filterAnd = document.getElementById("filterAnd");
+    const filterExplanation = document.getElementById("filterExplanation");
 
     slider.addEventListener("input", () => {
       label.textContent = slider.value;
       updateCommuteCircle(parseFloat(slider.value));
+      filterJobs();
+    });
+
+    commuteMode.addEventListener("change", () => {
+      filterJobs();
+    });
+
+    commuteTime.addEventListener("change", () => {
+      filterJobs();
+    });
+
+    filterOr.addEventListener("change", () => {
+      filterExplanation.textContent = "Show jobs within distance OR time";
+      filterJobs();
+    });
+
+    filterAnd.addEventListener("change", () => {
+      filterExplanation.textContent = "Show jobs within distance AND time";
       filterJobs();
     });
 
@@ -213,7 +252,9 @@
 
   // --- Apply commute + radius logic ---
   function applyFilter(results, radius, commuteTime) {
+    const useOrLogic = document.getElementById("filterOr").checked;
     let visibleCount = 0;
+
     jobMarkers.forEach(({ marker, job }, i) => {
       const element = results[i];
       let visible = false;
@@ -222,18 +263,61 @@
         const miles = element.distance.value / 1609.34;
         const mins = element.duration.value / 60;
 
-        // ✅ Only show if within commute time OR within distance radius
-        if (miles <= radius || mins <= commuteTime) {
-          visible = true;
-          visibleCount++;
+        if (useOrLogic) {
+          // Show if within distance OR time
+          if (miles <= radius || mins <= commuteTime) {
+            visible = true;
+            visibleCount++;
+          }
+        } else {
+          // Show if within distance AND time
+          if (miles <= radius && mins <= commuteTime) {
+            visible = true;
+            visibleCount++;
+          }
         }
       }
       marker.setVisible(visible);
     });
 
+    const mode = useOrLogic ? "or" : "and";
     document.getElementById("jobCountText").textContent =
-      `Showing ${visibleCount} job(s) within ${radius} miles or ${commuteTime} minutes.`;
+      `Showing ${visibleCount} job(s) within ${radius} miles ${mode} ${commuteTime} minutes.`;
   }
+
+  // --- Save preferences ---
+  {% if user.is_authenticated %}
+  document.getElementById("savePrefsBtn").addEventListener("click", async () => {
+    const radius = parseFloat(document.getElementById("radiusRange").value);
+    const mode = document.getElementById("commuteMode").value.toLowerCase();
+    const time = parseInt(document.getElementById("commuteTime").value);
+
+    try {
+      const response = await fetch("{% url 'account:profile_update' %}", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": "{{ csrf_token }}"
+        },
+        body: JSON.stringify({
+          preferred_commute_radius: radius,
+          preferred_commute_mode: mode,
+          preferred_commute_time: time
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        alert("Preferences saved successfully!");
+      } else {
+        alert("Failed to save preferences: " + (data.error || "Unknown error"));
+      }
+    } catch (error) {
+      console.error("Error saving preferences:", error);
+      alert("Failed to save preferences. Please try again.");
+    }
+  });
+  {% endif %}
 </script>
 
 <!-- ✅ Safe API key reference -->

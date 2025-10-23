@@ -380,6 +380,21 @@ def create_profile(request):
             applicant.resume = data.get('resume', '')
             applicant.save()
 
+            # Update commute preferences on Account model
+            if 'preferred_commute_radius' in data:
+                try:
+                    user.preferred_commute_radius = int(data.get('preferred_commute_radius')) if data.get('preferred_commute_radius') else None
+                except ValueError:
+                    pass
+            if 'preferred_commute_mode' in data:
+                user.preferred_commute_mode = data.get('preferred_commute_mode', 'driving')
+            if 'preferred_commute_time' in data:
+                try:
+                    user.preferred_commute_time = int(data.get('preferred_commute_time')) if data.get('preferred_commute_time') else None
+                except ValueError:
+                    pass
+            user.save()
+
             # Handle work experiences
             if 'work_experiences' in data:
                 applicant.work_experiences.all().delete()

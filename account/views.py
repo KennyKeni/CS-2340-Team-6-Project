@@ -175,6 +175,10 @@ def profile_update(request) -> JsonResponse:
                 )
             if "preferred_commute_mode" in data:
                 updated_user.preferred_commute_mode = data["preferred_commute_mode"]
+            if "preferred_commute_time" in data:
+                updated_user.preferred_commute_time = int(
+                    data["preferred_commute_time"]
+                )
             updated_user.save()
 
             # Applicant-specific updates
