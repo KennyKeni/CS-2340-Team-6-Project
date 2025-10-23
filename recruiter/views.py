@@ -229,9 +229,15 @@ def job_delete(request, pk: int):
 @recruiter_required
 def candidate_search(request):
     """Search for candidates/applicants with filtering"""
-    candidates = Applicant.objects.select_related('account').prefetch_related(
+    candidates = Applicant.objects.select_related('account', 'privacy_settings').prefetch_related(
         'skills', 'work_experiences', 'education', 'links'
     ).all()
+
+    # Filter out candidates who have hidden their profiles from recruiters
+    candidates = candidates.filter(
+        Q(privacy_settings__visible_to_recruiters=True) | 
+        Q(privacy_settings__isnull=True)  # Include profiles without privacy settings (default visible)
+    )
 
     # Get search parameters
     q = request.GET.get('q', '').strip()  # Name/headline search

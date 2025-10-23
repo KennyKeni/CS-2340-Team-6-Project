@@ -1,44 +1,72 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static applicant_utils %}
 
 {% block title %}Find Candidates · DevJobs{% endblock %}
 
-{# HERO with search bar #}
 {% block hero %}
 <section class="hero">
   <div class="container text-center">
     <h1 class="display-5 fw-semibold mb-3">Find Talent</h1>
-    <p class="lead mb-4">Search applicants by skills, location, and projects.</p>
+    <p class="lead mb-4">
+      Search applicants by skills, location, and projects.
+    </p>
 
     <form method="get" class="searchbar mx-auto">
       <div class="row g-2">
         <div class="col-12 col-md-4">
-          <input type="text" name="q" class="form-control form-control-lg"
-                 placeholder="Keyword (name, headline)"
-                 value="{{ request.GET.q }}">
+          <input
+            type="text"
+            name="q"
+            class="form-control form-control-lg"
+            placeholder="Keyword (name, headline)"
+            value="{{ request.GET.q }}"
+          />
         </div>
         <div class="col-12 col-md-4">
-          <input type="text" name="skills" class="form-control form-control-lg"
-                 placeholder="Skills (comma separated)"
-                 value="{{ request.GET.skills }}">
+          <input
+            type="text"
+            name="skills"
+            class="form-control form-control-lg"
+            placeholder="Skills (comma separated)"
+            value="{{ request.GET.skills }}"
+          />
         </div>
         <div class="col-12 col-md-4">
-          <input type="text" name="projects" class="form-control form-control-lg"
-                 placeholder="Projects (GitHub, keywords)"
-                 value="{{ request.GET.projects }}">
+          <input
+            type="text"
+            name="projects"
+            class="form-control form-control-lg"
+            placeholder="Projects (GitHub, keywords)"
+            value="{{ request.GET.projects }}"
+          />
         </div>
 
         <div class="col-12 col-md-4">
-          <input type="text" name="city" class="form-control form-control-lg"
-                 placeholder="City" value="{{ request.GET.city }}">
+          <input
+            type="text"
+            name="city"
+            class="form-control form-control-lg"
+            placeholder="City"
+            value="{{ request.GET.city }}"
+          />
         </div>
         <div class="col-6 col-md-4">
-          <input type="text" name="state" class="form-control form-control-lg"
-                 placeholder="State" value="{{ request.GET.state }}">
+          <input
+            type="text"
+            name="state"
+            class="form-control form-control-lg"
+            placeholder="State"
+            value="{{ request.GET.state }}"
+          />
         </div>
         <div class="col-6 col-md-4">
-          <input type="text" name="country" class="form-control form-control-lg"
-                 placeholder="Country" value="{{ request.GET.country }}">
+          <input
+            type="text"
+            name="country"
+            class="form-control form-control-lg"
+            placeholder="Country"
+            value="{{ request.GET.country }}"
+          />
         </div>
       </div>
 
@@ -57,95 +85,212 @@
 <div class="container my-4">
   <div class="d-flex justify-content-between align-items-baseline mb-3">
     <h2 class="h5 mb-0">Results</h2>
-    <span class="text-body-secondary">{{ candidates|length }} result{{ candidates|length|pluralize }}</span>
+    <span class="text-body-secondary"
+      >{{ candidates|length }} result{{ candidates|length|pluralize }}</span
+    >
   </div>
 
   <div class="row g-3">
     {% for c in candidates %}
-      <div class="col-12">
-        <div class="card card-hover h-100">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-start">
-              <div class="me-3">
-                <h5 class="card-title mb-1">
-                  {# Prefer full name; fall back to username #}
-                  {% if c.account.first_name or c.account.last_name %}
-                    {{ c.account.first_name }} {{ c.account.last_name }}
-                  {% else %}
-                    {{ c.account.username }}
-                  {% endif %}
-                </h5>
-                <div class="small text-body-secondary">
-                  {# Location line: city • state • country (only show what exists) #}
+    <div class="col-12">
+      <div class="card card-hover h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div class="me-3">
+              <h5 class="card-title mb-1">
+                {% comment %}Prefer full name; fall back to username{% endcomment %}
+                {% if c.account.first_name or c.account.last_name %}
+                  {{ c.account.first_name }} {{ c.account.last_name }}
+                {% else %}
+                  {{ c.account.username }}
+                {% endif %}
+              </h5>
+              <div class="small text-body-secondary">
+                {% comment %}Location line: city • state • country (only show what exists and if privacy allows){% endcomment %}
+                {% if c|get_privacy_setting:"show_location" %}
                   {% if c.account.city %}{{ c.account.city }}{% endif %}
                   {% if c.account.state %}{% if c.account.city %} • {% endif %}{{ c.account.state }}{% endif %}
                   {% if c.account.country %}{% if c.account.city or c.account.state %} • {% endif %}{{ c.account.country }}{% endif %}
-                </div>
-              </div>
-              <div class="text-end">
-                {% if c.headline %}
-                  <span class="badge text-bg-light border">{{ c.headline|truncatechars:40 }}</span>
+                {% else %}
+                  <span class="text-muted fst-italic">Location hidden</span>
                 {% endif %}
               </div>
             </div>
+            <div class="text-end">
+              {% if c.headline and c|get_privacy_setting:"show_headline" %}
+              <span class="badge text-bg-light border"
+                >{{ c.headline|truncatechars:40 }}</span
+              >
+              {% endif %}
+            </div>
+          </div>
 
-            {# Top skills as chips #}
+          {% comment %}Top skills as chips{% endcomment %}
+          {% if c|get_privacy_setting:"show_skills" %}
             {% with c.skills.all as skillset %}
               {% if skillset %}
-                <div class="mt-2">
-                  {% for s in skillset|slice:":6" %}
-                    <span class="badge text-bg-secondary me-1 mb-1">{{ s.skill_name }}</span>
-                  {% endfor %}
-                  {% if skillset|length > 6 %}
-                    <span class="badge text-bg-light border">+{{ skillset|length|add:"-6" }}</span>
-                  {% endif %}
-                </div>
+          <div class="mt-2">
+            <strong class="small text-muted">Skills:</strong>
+            {% for s in skillset|slice:":10" %}
+              <span class="badge text-bg-secondary me-1 mb-1">{{ s.skill_name }}{% if s.proficiency_level %} ({{ s.proficiency_level }}){% endif %}</span>
+            {% endfor %}
+            {% if skillset|length > 10 %}
+              <span class="badge text-bg-light border">+{{ skillset|length|add:"-10" }} more</span>
+            {% endif %}
+          </div>
               {% endif %}
             {% endwith %}
+          {% else %}
+          <div class="mt-2 small text-muted fst-italic">
+            <i class="bi bi-eye-slash"></i> Skills hidden by candidate
+          </div>
+          {% endif %}
 
-            {# Quick project/link badges (GitHub/Portfolio/etc) #}
+          {% comment %}Education information{% endcomment %}
+          {% if c|get_privacy_setting:"show_education" %}
+            {% with c.education.all|slice:":2" as education_list %}
+              {% if education_list %}
+          <div class="mt-2 small">
+            <strong class="text-muted">Education:</strong>
+            {% for edu in education_list %}
+              <div class="ms-2">
+                <i class="bi bi-mortarboard"></i> {{ edu.degree }} in {{ edu.field_of_study }} - {{ edu.institution }}
+                {% if edu.gpa and c|get_privacy_setting:"show_gpa" %}
+                  <span class="badge text-bg-info">GPA: {{ edu.gpa }}</span>
+                {% endif %}
+                {% if edu.is_current and c|get_privacy_setting:"show_current_education" %}
+                  <span class="badge text-bg-success">Current</span>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+              {% endif %}
+            {% endwith %}
+          {% else %}
+          <div class="mt-2 small text-muted fst-italic">
+            <i class="bi bi-eye-slash"></i> Education hidden by candidate
+          </div>
+          {% endif %}
+
+          {% comment %}Work experience details{% endcomment %}
+          {% if c|get_privacy_setting:"show_work_experience" %}
+            {% with c.work_experiences.all|slice:":2" as work_list %}
+              {% if work_list %}
+          <div class="mt-2 small">
+            <strong class="text-muted">Experience:</strong>
+            {% for w in work_list %}
+              <div class="ms-2">
+                <i class="bi bi-briefcase"></i> {{ w.position }} @ {{ w.company }}
+                {% if w.location %}<span class="text-muted">({{ w.location }})</span>{% endif %}
+                {% if w.is_current and c|get_privacy_setting:"show_current_employment" %}
+                  <span class="badge text-bg-success">Current</span>
+                {% elif w.is_current %}
+                  <span class="badge text-bg-secondary">Status Hidden</span>
+                {% endif %}
+              </div>
+            {% endfor %}
+            {% if c.work_experiences.all|length > 2 %}
+              <div class="ms-2 text-muted fst-italic">
+                +{{ c.work_experiences.all|length|add:"-2" }} more position{{ c.work_experiences.all|length|add:"-2"|pluralize }}
+              </div>
+            {% endif %}
+          </div>
+              {% endif %}
+            {% endwith %}
+          {% else %}
+          <div class="mt-2 small text-muted fst-italic">
+            <i class="bi bi-eye-slash"></i> Work experience hidden by candidate
+          </div>
+          {% endif %}
+
+          {% comment %}Quick project/link badges (GitHub/Portfolio/etc){% endcomment %}
+          {% if c|get_privacy_setting:"show_links" %}
             {% with c.links.all as linkset %}
               {% if linkset %}
-                <div class="mt-2 small">
-                  {% for l in linkset|slice:":3" %}
-                    <a class="badge text-bg-primary text-decoration-none me-1 mb-1" href="{{ l.url }}" target="_blank" rel="noopener">
-                      {{ l.platform|default:"Link" }}
-                    </a>
-                  {% endfor %}
-                </div>
+          <div class="mt-2 small">
+            <strong class="text-muted">Links:</strong>
+            {% for l in linkset %}
+              <a
+                class="badge text-bg-primary text-decoration-none me-1 mb-1"
+                href="{{ l.url }}"
+                target="_blank"
+                rel="noopener"
+                title="{{ l.description }}"
+              >
+                <i class="bi bi-link-45deg"></i> {{ l.platform|default:"Link" }}
+              </a>
+            {% endfor %}
+          </div>
               {% endif %}
             {% endwith %}
+          {% endif %}
 
-            {# Recent experience line #}
-            {% with c.work_experiences.all|slice:":1" as recent %}
-              {% if recent %}
-                {% for w in recent %}
-                  <div class="mt-2 small text-body-secondary">
-                    Recent: {{ w.position|default:"" }}{% if w.company %} @ {{ w.company }}{% endif %}
-                  </div>
-                {% endfor %}
-              {% endif %}
-            {% endwith %}
+          {% comment %}Contact information if visible{% endcomment %}
+          {% if c|get_privacy_setting:"show_email" or c|get_privacy_setting:"show_phone" %}
+          <div class="mt-2 small">
+            <strong class="text-muted">Contact:</strong>
+            {% if c|get_privacy_setting:"show_email" %}
+              <span class="ms-2"><i class="bi bi-envelope"></i> {{ c.account.email }}</span>
+            {% endif %}
+            {% if c|get_privacy_setting:"show_phone" and c.account.phone_number %}
+              <span class="ms-2"><i class="bi bi-telephone"></i> {{ c.account.phone_number }}</span>
+            {% endif %}
+          </div>
+          {% endif %}
 
-            <div class="mt-3 d-flex flex-wrap gap-2">
-              {% if c.resume %}
-                <a class="btn btn-sm btn-outline-secondary" href="{{ c.resume }}" target="_blank" rel="noopener">
-                  <i class="bi bi-file-earmark-text"></i> Resume
-                </a>
-              {% endif %}
+          <div class="mt-3 d-flex flex-wrap gap-2">
+            {% if c.resume and c|get_privacy_setting:"show_resume" %}
+              <a
+                class="btn btn-sm btn-outline-secondary"
+                href="{{ c.resume }}"
+                target="_blank"
+                rel="noopener"
+              >
+                <i class="bi bi-file-earmark-text"></i> Resume
+              </a>
+            {% elif c.resume %}
+              <button
+                class="btn btn-sm btn-outline-secondary"
+                disabled
+                title="Resume hidden by candidate"
+              >
+                <i class="bi bi-file-earmark-text"></i> Resume (Hidden)
+              </button>
+            {% endif %}
+            {% if c|get_privacy_setting:"show_email" %}
+              <a
+                class="btn btn-sm btn-primary"
+                href="{% url 'recruiter:compose_email' c.account.id %}"
+              >
+                <i class="bi bi-envelope"></i> Send Email
+              </a>
+              <a
+                class="btn btn-sm btn-outline-primary"
+                href="mailto:{{ c.account.email }}"
+              >
+                <i class="bi bi-envelope-open"></i> Direct Email
               <a class="btn btn-sm btn-success" href="{% url 'recruiter:send_message' c.account.id %}">
                 <i class="bi bi-chat"></i> Message
               </a>
-            </div>
+            {% else %}
+              <button
+                class="btn btn-sm btn-outline-secondary"
+                disabled
+                title="Contact info hidden by candidate"
+              >
+                <i class="bi bi-envelope"></i> Contact Hidden
+              </button>
+            {% endif %}
           </div>
         </div>
       </div>
+    </div>
     {% empty %}
-      <div class="col-12">
-        <div class="alert alert-light border" role="alert">
-          No candidates found. Try broadening your filters.
-        </div>
+    <div class="col-12">
+      <div class="alert alert-light border" role="alert">
+        No candidates found. Try broadening your filters.
       </div>
+    </div>
     {% endfor %}
   </div>
 </div>

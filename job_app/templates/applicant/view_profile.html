@@ -11,10 +11,15 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
           <div>
             <h2 class="fw-bold text-primary mb-1">My Profile</h2>
-            <p class="text-muted mb-0">Your professional profile for recruiters</p>
+            <p class="text-muted mb-0">
+              Your professional profile for recruiters
+            </p>
           </div>
           <div>
-            <a href="{% url 'applicant:create_profile' %}" class="btn btn-outline-primary me-2">
+            <a
+              href="{% url 'applicant:create_profile' %}"
+              class="btn btn-outline-primary me-2"
+            >
               <i class="bi bi-pencil"></i> Edit Profile
             </a>
             <a href="{% url 'account:logout' %}" class="btn btn-outline-danger">
@@ -26,7 +31,7 @@
         <!-- Basic Information -->
         <div class="mb-4">
           <h5 class="fw-semibold mb-3">Basic Information</h5>
-          
+
           {% if template_data.applicant.headline %}
           <div class="mb-3">
             <label class="form-label fw-semibold">Professional Headline</label>
@@ -37,7 +42,14 @@
           {% if template_data.applicant.resume %}
           <div class="mb-3">
             <label class="form-label fw-semibold">Resume</label>
-            <p><a href="{{ template_data.applicant.resume }}" target="_blank" class="text-primary">{{ template_data.applicant.resume }}</a></p>
+            <p>
+              <a
+                href="{{ template_data.applicant.resume }}"
+                target="_blank"
+                class="text-primary"
+                >{{ template_data.applicant.resume }}</a
+              >
+            </p>
           </div>
           {% endif %}
         </div>
@@ -71,8 +83,7 @@
                 <h6 class="fw-semibold mb-1">{{ exp.position }}</h6>
                 <p class="text-primary mb-1">{{ exp.company }}</p>
                 <p class="text-muted small mb-0">
-                  {{ exp.start_date|date:"M Y" }} - 
-                  {% if exp.is_current %}Present{% else %}{{ exp.end_date|date:"M Y" }}{% endif %}
+                  {{ exp.start_date|date:"M Y" }} - {% if exp.is_current %}Present{% else %}{{ exp.end_date|date:"M Y" }}{% endif %}
                   {% if exp.location %} • {{ exp.location }}{% endif %}
                 </p>
               </div>
@@ -93,11 +104,12 @@
           <div class="border rounded p-3 mb-3">
             <div class="d-flex justify-content-between align-items-start mb-2">
               <div>
-                <h6 class="fw-semibold mb-1">{{ edu.degree }} in {{ edu.field_of_study }}</h6>
+                <h6 class="fw-semibold mb-1">
+                  {{ edu.degree }} in {{ edu.field_of_study }}
+                </h6>
                 <p class="text-primary mb-1">{{ edu.institution }}</p>
                 <p class="text-muted small mb-0">
-                  {{ edu.start_date|date:"M Y" }} - 
-                  {% if edu.is_current %}Present{% else %}{{ edu.end_date|date:"M Y" }}{% endif %}
+                  {{ edu.start_date|date:"M Y" }} - {% if edu.is_current %}Present{% else %}{{ edu.end_date|date:"M Y" }}{% endif %}
                   {% if edu.gpa %} • GPA: {{ edu.gpa }}{% endif %}
                 </p>
               </div>
@@ -115,12 +127,18 @@
             {% for skill in template_data.skills %}
             <div class="col-md-6 mb-3">
               <div class="border rounded p-3">
-                <div class="d-flex justify-content-between align-items-center mb-2">
+                <div
+                  class="d-flex justify-content-between align-items-center mb-2"
+                >
                   <h6 class="fw-semibold mb-0">{{ skill.skill_name }}</h6>
-                  <span class="badge bg-primary">{{ skill.proficiency_level|title }}</span>
+                  <span class="badge bg-primary"
+                    >{{ skill.proficiency_level|title }}</span
+                  >
                 </div>
                 {% if skill.years_of_experience %}
-                <p class="text-muted small mb-0">{{ skill.years_of_experience }} year{{ skill.years_of_experience|pluralize }} of experience</p>
+                <p class="text-muted small mb-0">
+                  {{ skill.years_of_experience }} year{{ skill.years_of_experience|pluralize }} of experience
+                </p>
                 {% endif %}
               </div>
             </div>
@@ -137,11 +155,17 @@
             {% for link in template_data.links %}
             <div class="col-md-6 mb-3">
               <div class="border rounded p-3">
-                <div class="d-flex justify-content-between align-items-center mb-2">
+                <div
+                  class="d-flex justify-content-between align-items-center mb-2"
+                >
                   <h6 class="fw-semibold mb-0">{{ link.platform|title }}</h6>
                 </div>
                 <p class="mb-2">
-                  <a href="{{ link.url }}" target="_blank" class="text-primary text-decoration-none">
+                  <a
+                    href="{{ link.url }}"
+                    target="_blank"
+                    class="text-primary text-decoration-none"
+                  >
                     {{ link.url }}
                   </a>
                 </p>
@@ -155,12 +179,422 @@
         </div>
         {% endif %}
 
+        <!-- Privacy Settings -->
+        <div class="mb-4">
+          <h5 class="fw-semibold mb-3">
+            <i class="bi bi-shield-lock"></i> Privacy Settings
+          </h5>
+          <p class="text-muted small mb-3">
+            Control what information recruiters can see about your profile
+          </p>
+
+          <div class="border rounded p-3">
+            <!-- Visible to Recruiters -->
+            <div
+              class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom"
+            >
+              <div>
+                <label class="form-label fw-semibold mb-1"
+                  >Profile Visibility</label
+                >
+                <p class="text-muted small mb-0">
+                  Make your profile visible in recruiter searches
+                </p>
+              </div>
+              <div class="form-check form-switch">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  role="switch"
+                  id="visible_to_recruiters"
+                  {% if template_data.privacy_settings.visible_to_recruiters %}checked{% endif %}
+                  onchange="updatePrivacySettings()"
+                />
+              </div>
+            </div>
+
+            <!-- Show Email -->
+            <div
+              class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom"
+            >
+              <div>
+                <label class="form-label fw-semibold mb-1">Email Address</label>
+                <p class="text-muted small mb-0">{{ user.email }}</p>
+              </div>
+              <div class="form-check form-switch">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  role="switch"
+                  id="show_email"
+                  {% if template_data.privacy_settings.show_email %}checked{% endif %}
+                  onchange="updatePrivacySettings()"
+                />
+              </div>
+            </div>
+
+            <!-- Show Phone -->
+            <div
+              class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom"
+            >
+              <div>
+                <label class="form-label fw-semibold mb-1">Phone Number</label>
+                <p class="text-muted small mb-0">
+                  {% if user.phone_number %}{{ user.phone_number }}{% else %}Not provided{% endif %}
+                </p>
+              </div>
+              <div class="form-check form-switch">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  role="switch"
+                  id="show_phone"
+                  {% if template_data.privacy_settings.show_phone %}checked{% endif %}
+                  onchange="updatePrivacySettings()"
+                />
+              </div>
+            </div>
+
+            <!-- Show Location -->
+            <div
+              class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom"
+            >
+              <div>
+                <label class="form-label fw-semibold mb-1">Location</label>
+                <p class="text-muted small mb-0">
+                  Show your city, state, and country
+                </p>
+              </div>
+              <div class="form-check form-switch">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  role="switch"
+                  id="show_location"
+                  {% if template_data.privacy_settings.show_location %}checked{% endif %}
+                  onchange="updatePrivacySettings()"
+                />
+              </div>
+            </div>
+
+            <!-- Show Headline -->
+            <div
+              class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom"
+            >
+              <div>
+                <label class="form-label fw-semibold mb-1"
+                  >Professional Headline</label
+                >
+                <p class="text-muted small mb-0">
+                  {% if template_data.applicant.headline %}{{ template_data.applicant.headline|truncatechars:50 }}{% else %}Not set{% endif %}
+                </p>
+              </div>
+              <div class="form-check form-switch">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  role="switch"
+                  id="show_headline"
+                  {% if template_data.privacy_settings.show_headline %}checked{% endif %}
+                  onchange="updatePrivacySettings()"
+                />
+              </div>
+            </div>
+
+            <!-- Show Skills -->
+            <div
+              class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom"
+            >
+              <div>
+                <label class="form-label fw-semibold mb-1">Skills</label>
+                <p class="text-muted small mb-0">
+                  Show your skills and proficiency levels
+                </p>
+              </div>
+              <div class="form-check form-switch">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  role="switch"
+                  id="show_skills"
+                  {% if template_data.privacy_settings.show_skills %}checked{% endif %}
+                  onchange="updatePrivacySettings()"
+                />
+              </div>
+            </div>
+
+            <!-- Show Work Experience -->
+            <div
+              class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom"
+            >
+              <div>
+                <label class="form-label fw-semibold mb-1"
+                  >Work Experience</label
+                >
+                <p class="text-muted small mb-0">
+                  Show your work history and positions
+                </p>
+              </div>
+              <div class="form-check form-switch">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  role="switch"
+                  id="show_work_experience"
+                  {% if template_data.privacy_settings.show_work_experience %}checked{% endif %}
+                  onchange="updatePrivacySettings()"
+                />
+              </div>
+            </div>
+
+            <!-- Show Education -->
+            <div
+              class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom"
+            >
+              <div>
+                <label class="form-label fw-semibold mb-1">Education</label>
+                <p class="text-muted small mb-0">
+                  Show your educational background
+                </p>
+              </div>
+              <div class="form-check form-switch">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  role="switch"
+                  id="show_education"
+                  {% if template_data.privacy_settings.show_education %}checked{% endif %}
+                  onchange="updatePrivacySettings()"
+                />
+              </div>
+            </div>
+
+            <!-- Show Links -->
+            <div
+              class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom"
+            >
+              <div>
+                <label class="form-label fw-semibold mb-1"
+                  >Portfolio & Links</label
+                >
+                <p class="text-muted small mb-0">
+                  Show your GitHub, LinkedIn, and other links
+                </p>
+              </div>
+              <div class="form-check form-switch">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  role="switch"
+                  id="show_links"
+                  {% if template_data.privacy_settings.show_links %}checked{% endif %}
+                  onchange="updatePrivacySettings()"
+                />
+              </div>
+            </div>
+
+            <!-- Show Resume -->
+            <div
+              class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom"
+            >
+              <div>
+                <label class="form-label fw-semibold mb-1">Resume</label>
+                <p class="text-muted small mb-0">
+                  {% if template_data.applicant.resume %}Resume link{% else %}Not uploaded{% endif %}
+                </p>
+              </div>
+              <div class="form-check form-switch">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  role="switch"
+                  id="show_resume"
+                  {% if template_data.privacy_settings.show_resume %}checked{% endif %}
+                  onchange="updatePrivacySettings()"
+                />
+              </div>
+            </div>
+
+            <!-- Show GPA -->
+            <div
+              class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom"
+            >
+              <div>
+                <label class="form-label fw-semibold mb-1">GPA</label>
+                <p class="text-muted small mb-0">
+                  Show GPA in education records
+                </p>
+              </div>
+              <div class="form-check form-switch">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  role="switch"
+                  id="show_gpa"
+                  {% if template_data.privacy_settings.show_gpa %}checked{% endif %}
+                  onchange="updatePrivacySettings()"
+                />
+              </div>
+            </div>
+
+            <!-- Show Current Employment -->
+            <div
+              class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom"
+            >
+              <div>
+                <label class="form-label fw-semibold mb-1"
+                  >Current Job Status</label
+                >
+                <p class="text-muted small mb-0">
+                  Show which work experience is current
+                </p>
+              </div>
+              <div class="form-check form-switch">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  role="switch"
+                  id="show_current_employment"
+                  {% if template_data.privacy_settings.show_current_employment %}checked{% endif %}
+                  onchange="updatePrivacySettings()"
+                />
+              </div>
+            </div>
+
+            <!-- Show Current Education -->
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <div>
+                <label class="form-label fw-semibold mb-1"
+                  >Current Education Status</label
+                >
+                <p class="text-muted small mb-0">
+                  Show which education is current/in progress
+                </p>
+              </div>
+              <div class="form-check form-switch">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  role="switch"
+                  id="show_current_education"
+                  {% if template_data.privacy_settings.show_current_education %}checked{% endif %}
+                  onchange="updatePrivacySettings()"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-          <a href="{% url 'home:index' %}" class="btn btn-outline-secondary me-md-2">Back to Home</a>
-          <a href="{% url 'applicant:create_profile' %}" class="btn btn-primary">Edit Profile</a>
+          <a
+            href="{% url 'home:index' %}"
+            class="btn btn-outline-secondary me-md-2"
+            >Back to Home</a
+          >
+          <a href="{% url 'applicant:create_profile' %}" class="btn btn-primary"
+            >Edit Profile</a
+          >
         </div>
       </div>
     </div>
   </div>
 </div>
+
+<script>
+  // Debounce timer to prevent multiple simultaneous requests
+  let updateTimer = null;
+  let isUpdating = false;
+
+  function updatePrivacySettings() {
+    // Clear any existing timer
+    if (updateTimer) {
+      clearTimeout(updateTimer);
+    }
+
+    // Debounce: wait 500ms after last toggle before sending request
+    updateTimer = setTimeout(() => {
+      // Prevent multiple simultaneous requests
+      if (isUpdating) {
+        return;
+      }
+      isUpdating = true;
+
+      const privacySettings = {
+        visible_to_recruiters: document.getElementById("visible_to_recruiters")
+          .checked,
+        show_email: document.getElementById("show_email").checked,
+        show_phone: document.getElementById("show_phone").checked,
+        show_location: document.getElementById("show_location").checked,
+        show_headline: document.getElementById("show_headline").checked,
+        show_skills: document.getElementById("show_skills").checked,
+        show_work_experience: document.getElementById("show_work_experience")
+          .checked,
+        show_education: document.getElementById("show_education").checked,
+        show_links: document.getElementById("show_links").checked,
+        show_resume: document.getElementById("show_resume").checked,
+        show_gpa: document.getElementById("show_gpa").checked,
+        show_current_employment: document.getElementById(
+          "show_current_employment"
+        ).checked,
+        show_current_education: document.getElementById("show_current_education")
+          .checked,
+      };
+
+      fetch('{% url "applicant:view_profile" %}', {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": "{{ csrf_token }}",
+        },
+        body: JSON.stringify({ privacy_settings: privacySettings }),
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.json();
+        })
+        .then((data) => {
+          if (data.status === "success") {
+            // Show success message in a fixed position notification
+            showNotification("Settings Saved", "success");
+          } else {
+            throw new Error(data.message || 'Update failed');
+          }
+        })
+        .catch((error) => {
+          console.error("Error updating privacy settings:", error);
+          showNotification("Failed to update. Please try again.", "error");
+        })
+        .finally(() => {
+          isUpdating = false;
+        });
+    }, 500);
+  }
+
+  function showNotification(message, type) {
+    // Remove any existing notification
+    const existing = document.getElementById('privacy-notification');
+    if (existing) {
+      existing.remove();
+    }
+
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.id = 'privacy-notification';
+    notification.className = `alert alert-${type === 'success' ? 'success' : 'danger'} position-fixed top-0 start-50 translate-middle-x mt-3`;
+    notification.style.zIndex = '9999';
+    notification.innerHTML = `
+      <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+      ${message}
+    `;
+    
+    document.body.appendChild(notification);
+
+    // Auto-remove after 2 seconds
+    setTimeout(() => {
+      notification.remove();
+    }, 2000);
+  }
+</script>
 {% endblock %}

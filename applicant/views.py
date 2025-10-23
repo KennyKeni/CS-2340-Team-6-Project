@@ -10,7 +10,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from .decorators import applicant_required
-from .models import Applicant, Application, Education, Link, Skill, WorkExperience
+from .models import Applicant, Application, Education, Link, Skill, WorkExperience, ProfilePrivacySettings
 from applicant.utils import is_applicant
 from recruiter.models import Message, Notification
 from utils.messaging import get_messages_context
@@ -22,10 +22,21 @@ User = get_user_model()
 def applicant_search(request):
     # Get all applicants with related data
     applicants = (
-        Applicant.objects.select_related("account")
+        Applicant.objects.select_related("account", "privacy_settings")
         .prefetch_related("work_experiences", "education", "skills", "links")
         .all()
     )
+    
+    # Check if requester is a recruiter
+    from recruiter.utils import is_recruiter
+    is_recruiter_user = is_recruiter(request.user)
+    
+    # If requester is a recruiter, filter out candidates who have hidden their profiles
+    if is_recruiter_user:
+        applicants = applicants.filter(
+            Q(privacy_settings__visible_to_recruiters=True) | 
+            Q(privacy_settings__isnull=True)  # Include profiles without privacy settings (default visible)
+        )
 
     # Apply filters
     headline = request.GET.get("headline")
@@ -183,12 +194,37 @@ def applicant_search(request):
                 }
             )
 
+        # Get privacy settings
+        privacy_settings = applicant.get_or_create_privacy_settings()
+        
+        # Apply privacy filters for recruiters
+        filtered_email = account.email if (not is_recruiter_user or privacy_settings.show_email) else "[Hidden]"
+        filtered_phone = account.phone_number if (not is_recruiter_user or privacy_settings.show_phone) else "[Hidden]"
+        filtered_resume = applicant.resume if (not is_recruiter_user or privacy_settings.show_resume) else "[Hidden]"
+        
+        # Filter GPA from education records
+        if is_recruiter_user and not privacy_settings.show_gpa:
+            for edu in education:
+                edu['gpa'] = None
+        
+        # Filter current status from work experiences
+        if is_recruiter_user and not privacy_settings.show_current_employment:
+            for exp in work_experiences:
+                if exp['is_current']:
+                    exp['is_current'] = None  # Mark as hidden
+        
+        # Filter current status from education
+        if is_recruiter_user and not privacy_settings.show_current_education:
+            for edu in education:
+                if edu['is_current']:
+                    edu['is_current'] = None  # Mark as hidden
+        
         results.append(
             {
                 "id": applicant.account.id,
                 "username": account.username,
-                "email": account.email,
-                "phone_number": account.phone_number,
+                "email": filtered_email,
+                "phone_number": filtered_phone,
                 "profile_picture": account.profile_picture,
                 "street_address": account.street_address,
                 "city": account.city,
@@ -196,7 +232,7 @@ def applicant_search(request):
                 "country": account.country,
                 "zip_code": account.zip_code,
                 "headline": applicant.headline,
-                "resume": applicant.resume,
+                "resume": filtered_resume,
                 "user_type": 'applicant' if is_applicant(account) else 'recruiter' if hasattr(account, 'recruiter') else '',
                 "work_experiences": work_experiences,
                 "education": education,
@@ -418,7 +454,7 @@ def create_profile(request):
 
 @login_required
 def view_profile(request):
-    """View applicant profile"""
+    """View applicant profile with privacy settings"""
     user = request.user
 
     # Check if user is an applicant
@@ -430,6 +466,34 @@ def view_profile(request):
     except Applicant.DoesNotExist:
         return redirect('applicant:create_profile')
 
+    # Get or create privacy settings
+    privacy_settings = applicant.get_or_create_privacy_settings()
+
+    # Handle privacy settings update via AJAX
+    if request.method == 'POST' and request.content_type == 'application/json':
+        import json
+        try:
+            data = json.loads(request.body)
+            if 'privacy_settings' in data:
+                settings_data = data['privacy_settings']
+                privacy_settings.show_email = settings_data.get('show_email', True)
+                privacy_settings.show_phone = settings_data.get('show_phone', True)
+                privacy_settings.show_location = settings_data.get('show_location', True)
+                privacy_settings.show_resume = settings_data.get('show_resume', True)
+                privacy_settings.show_headline = settings_data.get('show_headline', True)
+                privacy_settings.show_skills = settings_data.get('show_skills', True)
+                privacy_settings.show_work_experience = settings_data.get('show_work_experience', True)
+                privacy_settings.show_education = settings_data.get('show_education', True)
+                privacy_settings.show_links = settings_data.get('show_links', True)
+                privacy_settings.show_gpa = settings_data.get('show_gpa', True)
+                privacy_settings.show_current_employment = settings_data.get('show_current_employment', True)
+                privacy_settings.show_current_education = settings_data.get('show_current_education', True)
+                privacy_settings.visible_to_recruiters = settings_data.get('visible_to_recruiters', True)
+                privacy_settings.save()
+                return JsonResponse({'status': 'success', 'message': 'Privacy settings updated'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
     template_data = {
         "title": "My Profile · DevJobs",
         "applicant": applicant,
@@ -437,6 +501,7 @@ def view_profile(request):
         "education": applicant.education.all(),
         "skills": applicant.skills.all(),
         "links": applicant.links.all(),
+        "privacy_settings": privacy_settings,
     }
     return render(request, 'applicant/view_profile.html', {'template_data': template_data})
 
