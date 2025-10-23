@@ -54,6 +54,24 @@
           {% endif %}
         </div>
 
+        <!-- 🚗 Commute Preferences -->
+        {% if user.preferred_commute_radius or user.preferred_commute_mode or user.preferred_commute_time %}
+        <div class="mb-4">
+          <h5 class="fw-semibold mb-3">Commute Preferences</h5>
+          <div class="border rounded p-3">
+            {% if user.preferred_commute_radius %}
+            <p class="mb-2"><strong>Preferred Distance:</strong> {{ user.preferred_commute_radius }} miles</p>
+            {% endif %}
+            {% if user.preferred_commute_mode %}
+            <p class="mb-2"><strong>Preferred Mode:</strong> {{ user.get_preferred_commute_mode_display }}</p>
+            {% endif %}
+            {% if user.preferred_commute_time %}
+            <p class="mb-0"><strong>Preferred Time:</strong> {{ user.preferred_commute_time }} minutes</p>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+
         <!-- Work Experience -->
         {% if template_data.work_experiences %}
         <div class="mb-4">

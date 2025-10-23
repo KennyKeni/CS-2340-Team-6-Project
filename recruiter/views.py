@@ -1,20 +1,22 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.core.mail import send_mail
 from django.conf import settings
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_http_methods
+from django.utils import timezone
 
 from .decorators import recruiter_required
-from .forms import CandidateEmailForm
-from .models import Recruiter, CandidateEmail
+from .forms import MessageForm, SavedSearchForm
+from .models import Recruiter, Notification, Message, SavedSearch
 from job.forms import JobPostingForm
 from job.models import JobPosting
 from applicant.models import Applicant
 from account.models import Account
+from utils.messaging import get_messages_context
 
 
 @require_http_methods(["GET"])
@@ -286,76 +288,156 @@ def candidate_search(request):
     return render(request, 'recruiter/candidate_search.html', context)
 
 
-@login_required
-@recruiter_required
-def compose_email(request, candidate_id):
-    """View for recruiters to compose and send emails to candidates"""
-    candidate = get_object_or_404(Account, id=candidate_id)
-    recruiter = request.user.recruiter
-    
-    # Ensure the candidate is actually an applicant
-    if not hasattr(candidate, 'applicant'):
-        messages.error(request, "The specified user is not a candidate.")
-        return redirect('recruiter:candidate_search')
-    
-    if request.method == 'POST':
-        form = CandidateEmailForm(request.POST, recruiter=recruiter)
-        if form.is_valid():
-            email = form.save(commit=False)
-            email.sender = request.user
-            email.recipient = candidate
-            
-            # Try to send the email
-            try:
-                # Add recruiter signature to email body
-                email_body_with_signature = f"{email.body}\n\n---\n{request.user.first_name} {request.user.last_name}\n{request.user.email}"
-
-                send_mail(
-                    subject=f"{settings.EMAIL_SUBJECT_PREFIX}{email.subject}",
-                    message=email_body_with_signature,
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[candidate.email],
-                    fail_silently=False,
-                )
-                email.is_sent = True
-                messages.success(request, f"Email sent successfully to {candidate.get_full_name()}!")
-            except Exception as e:
-                email.is_sent = False
-                email.error_message = str(e)
-                messages.error(request, f"Failed to send email: {str(e)}")
-            
-            email.save()
-            return redirect('recruiter:email_history')
-    else:
-        form = CandidateEmailForm(recruiter=recruiter)
-    
-    context = {
-        'form': form,
-        'candidate': candidate,
-        'template_data': {
-            'title': f'Email {candidate.get_full_name()} · DevJobs'
-        }
-    }
-    return render(request, 'recruiter/compose_email.html', context)
 
 
 @login_required
-@recruiter_required
-def email_history(request):
-    """View to show email history for the current recruiter"""
-    emails = CandidateEmail.objects.filter(
-        sender=request.user
-    ).select_related('recipient', 'related_job').order_by('-sent_at')
+def notifications(request):
+    """View to show all notifications for the current user"""
+    notifications = Notification.objects.filter(
+        recipient=request.user
+    ).select_related('sender', 'related_job', 'related_application', 'related_message').order_by('-created_at')
+    
+    # Mark notifications as read when viewed
+    notifications.filter(is_read=False).update(is_read=True)
     
     # Pagination
-    paginator = Paginator(emails, 20)  # Show 20 emails per page
+    paginator = Paginator(notifications, 20)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
     context = {
-        'emails': page_obj,
+        'notifications': page_obj,
         'template_data': {
-            'title': 'Email History · DevJobs'
+            'title': 'Notifications · DevJobs'
         }
     }
-    return render(request, 'recruiter/email_history.html', context)
+    return render(request, 'recruiter/notifications.html', context)
+
+
+@login_required
+def send_message(request, recipient_id):
+    """View for sending direct messages"""
+    recipient = get_object_or_404(Account, id=recipient_id)
+    
+    if request.method == 'POST':
+        form = MessageForm(request.POST, sender=request.user)
+        if form.is_valid():
+            message = form.save(commit=False)
+            message.sender = request.user
+            message.recipient = recipient
+            message.save()
+            
+            # Create notification for recipient
+            Notification.objects.create(
+                recipient=recipient,
+                sender=request.user,
+                notification_type='message',
+                title=f'New message from {request.user.get_full_name()}',
+                message=f'You have received a new message: {message.subject}',
+                related_message=message
+            )
+
+            messages.success(request, f'Message sent to {recipient.get_full_name()}!')
+            return redirect(f"{reverse('recruiter:messages')}?partner_id={recipient.id}")
+    else:
+        form = MessageForm(sender=request.user)
+    
+    context = {
+        'form': form,
+        'recipient': recipient,
+        'template_data': {
+            'title': f'Message {recipient.get_full_name()} · DevJobs'
+        }
+    }
+    return render(request, 'recruiter/send_message.html', context)
+
+
+@login_required
+def messages_list(request):
+    """View to show all conversations for the current user"""
+    # Get messaging context from shared utility
+    context = get_messages_context(request)
+
+    # Add template-specific data
+    context['template_data'] = {
+        'title': 'Message History · DevJobs'
+    }
+
+    return render(request, 'recruiter/messages.html', context)
+
+
+@login_required
+@recruiter_required
+def saved_searches(request):
+    """View to manage saved searches"""
+    searches = SavedSearch.objects.filter(
+        recruiter=request.user
+    ).order_by('-created_at')
+    
+    context = {
+        'searches': searches,
+        'template_data': {
+            'title': 'Saved Searches · DevJobs'
+        }
+    }
+    return render(request, 'recruiter/saved_searches.html', context)
+
+
+@login_required
+@recruiter_required
+def save_search(request, search_id=None):
+    """View to create a new saved search or edit an existing one"""
+    search = None
+    if search_id:
+        search = get_object_or_404(SavedSearch, id=search_id, recruiter=request.user)
+    
+    if request.method == 'POST':
+        form = SavedSearchForm(request.POST, instance=search)
+        if form.is_valid():
+            search = form.save(commit=False)
+            search.recruiter = request.user
+            
+            # The form's clean methods already convert comma-separated strings to lists
+            search.skills = form.cleaned_data.get('skills', [])
+            search.job_types = form.cleaned_data.get('job_types', [])
+            
+            search.save()
+            messages.success(request, 'Search saved successfully!')
+            return redirect('recruiter:saved_searches')
+    else:
+        if search:
+            # Editing existing search
+            form = SavedSearchForm(instance=search)
+        else:
+            # Pre-populate form with current search parameters
+            form = SavedSearchForm(initial={
+                'skills': request.GET.get('skills', ''),
+                'location': request.GET.get('location', ''),
+                'min_experience': request.GET.get('min_experience', ''),
+                'max_experience': request.GET.get('max_experience', ''),
+            })
+    
+    context = {
+        'form': form,
+        'template_data': {
+            'title': 'Save Search · DevJobs'
+        }
+    }
+    return render(request, 'recruiter/save_search.html', context)
+
+
+@login_required
+@recruiter_required
+def delete_saved_search(request, search_id):
+    """View to delete a saved search"""
+    search = get_object_or_404(SavedSearch, id=search_id, recruiter=request.user)
+    search.delete()
+    messages.success(request, 'Search deleted successfully!')
+    return redirect('recruiter:saved_searches')
+
+
+@login_required
+def get_unread_notifications_count(request):
+    """API endpoint to get unread notifications count"""
+    count = Notification.objects.filter(recipient=request.user, is_read=False).count()
+    return JsonResponse({'count': count})

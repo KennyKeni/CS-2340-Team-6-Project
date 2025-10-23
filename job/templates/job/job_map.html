@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+  <h2 class="text-center mb-2 fw-bold">Job Postings Near You</h2>
+  <p class="text-center text-muted mb-3">
+    Adjust the distance or commute filters to see nearby jobs.
+  </p>
+
+  <!-- Controls -->
+  <div class="text-center mb-3">
+    <label for="radiusRange" class="form-label fw-bold me-3">
+      Distance: <span id="radiusValue">50</span> miles
+    </label>
+    <input type="range" id="radiusRange" min="10" max="3000" value="50" step="10"
+           class="form-range mb-2" style="width: 300px;">
+    <br>
+    <select id="commuteMode" class="form-select d-inline-block w-auto">
+      <option value="DRIVING">🚗 Drive</option>
+      <option value="TRANSIT">🚆 Transit</option>
+      <option value="WALKING">🚶 Walk</option>
+      <option value="BICYCLING">🚴 Bike</option>
+    </select>
+    <select id="commuteTime" class="form-select d-inline-block w-auto ms-2">
+      <option value="10">10 min</option>
+      <option value="20">20 min</option>
+      <option value="30" selected>30 min</option>
+      <option value="45">45 min</option>
+      <option value="60">1 hour</option>
+    </select>
+    <button id="locateBtn" class="btn btn-primary ms-3">📍 Use My Location</button>
+  </div>
+
+  <!-- Map -->
+  <div id="map" style="height: 600px; width: 100%; border-radius: 10px;"></div>
+  <p class="text-center text-muted mt-3" id="jobCountText">Waiting for location...</p>
+</div>
+
+<script>
+  let map, userMarker, userPosition, commuteCircle;
+  let jobMarkers = [], jobs = [];
+  let distanceService;
+  let cachedResults = {}; // cache commute results
+
+  // --- Haversine formula (for fast radius distance) ---
+  function haversine(lat1, lon1, lat2, lon2) {
+    const R = 3958.8;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a = Math.sin(dLat / 2) ** 2 +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) ** 2;
+    return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  // --- Initialize map ---
+  function initMap() {
+    map = new google.maps.Map(document.getElementById("map"), {
+      zoom: 4,
+      center: { lat: 39.8283, lng: -98.5795 },
+    });
+    distanceService = new google.maps.DistanceMatrixService();
+
+    // Load jobs from Django
+    jobs = [
+      {% for job in jobs %}
+        { title: "{{ job.title|escapejs }}", company: "{{ job.company|escapejs }}",
+          lat: parseFloat("{{ job.latitude }}"), lng: parseFloat("{{ job.longitude }}") },
+      {% endfor %}
+    ];
+
+    jobs.forEach(job => {
+      const marker = new google.maps.Marker({
+        position: { lat: job.lat, lng: job.lng },
+        map,
+        title: job.title,
+      });
+      const info = new google.maps.InfoWindow({
+        content: `<div><h6>${job.title}</h6><p>${job.company}</p></div>`
+      });
+      marker.addListener("click", () => info.open(map, marker));
+      jobMarkers.push({ marker, job });
+    });
+
+    setupControls();
+  }
+
+  // --- Controls setup ---
+  function setupControls() {
+    const slider = document.getElementById("radiusRange");
+    const label = document.getElementById("radiusValue");
+    const locateBtn = document.getElementById("locateBtn");
+
+    slider.addEventListener("input", () => {
+      label.textContent = slider.value;
+      updateCommuteCircle(parseFloat(slider.value));
+      filterJobs();
+    });
+
+    locateBtn.addEventListener("click", getUserLocation);
+    getUserLocation();
+  }
+
+  // --- Geolocation with fallback ---
+  function getUserLocation() {
+    console.log("📍 Requesting location...");
+    const fallback = setTimeout(() => {
+      console.warn("⚠️ Timeout, defaulting to Atlanta");
+      userPosition = { lat: 33.7490, lng: -84.3880 };
+      updateUserMarker();
+      filterJobs();
+    }, 3000);
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          clearTimeout(fallback);
+          userPosition = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          console.log("✅ Got location:", userPosition);
+          updateUserMarker();
+          filterJobs();
+        },
+        (err) => {
+          clearTimeout(fallback);
+          console.warn("⚠️ Geolocation denied:", err);
+          userPosition = { lat: 33.7490, lng: -84.3880 };
+          updateUserMarker();
+          filterJobs();
+        },
+        { enableHighAccuracy: true, timeout: 5000 }
+      );
+    }
+  }
+
+  // --- User marker + radius circle ---
+  function updateUserMarker() {
+    if (userMarker) userMarker.setMap(null);
+    userMarker = new google.maps.Marker({
+      position: userPosition,
+      map,
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 8,
+        fillColor: "#4285F4",
+        fillOpacity: 1,
+        strokeColor: "#ffffff",
+        strokeWeight: 2,
+      },
+      title: "You are here",
+    });
+
+    const radius = parseFloat(document.getElementById("radiusRange").value);
+    updateCommuteCircle(radius);
+    map.setCenter(userPosition);
+    map.setZoom(6);
+  }
+
+  // --- Animated radius circle ---
+  function updateCommuteCircle(targetMiles) {
+    if (!userPosition) return;
+    const targetMeters = targetMiles * 1609.34;
+    if (!commuteCircle) {
+      commuteCircle = new google.maps.Circle({
+        strokeColor: "#4285F4",
+        strokeOpacity: 0.4,
+        strokeWeight: 2,
+        fillColor: "#4285F4",
+        fillOpacity: 0.1,
+        map,
+        center: userPosition,
+        radius: 0,
+      });
+    }
+    const current = commuteCircle.getRadius();
+    const steps = 20;
+    let count = 0;
+    const diff = (targetMeters - current) / steps;
+    const animate = setInterval(() => {
+      count++;
+      commuteCircle.setRadius(current + diff * count);
+      if (count >= steps) clearInterval(animate);
+    }, 15);
+  }
+
+  // --- Smart filter: radius + commute ---
+  function filterJobs() {
+    if (!userPosition) return;
+
+    const commuteMode = document.getElementById("commuteMode").value;
+    const commuteTime = parseInt(document.getElementById("commuteTime").value);
+    const radius = parseFloat(document.getElementById("radiusRange").value);
+    let visibleCount = 0;
+
+    const destinations = jobMarkers.map(({ job }) => new google.maps.LatLng(job.lat, job.lng));
+    const cacheKey = `${userPosition.lat},${userPosition.lng}_${commuteMode}`;
+    if (cachedResults[cacheKey]) {
+      applyFilter(cachedResults[cacheKey], radius, commuteTime);
+      return;
+    }
+
+    distanceService.getDistanceMatrix(
+      { origins: [userPosition], destinations, travelMode: commuteMode },
+      (response, status) => {
+        if (status !== "OK") {
+          console.error("DistanceMatrix failed:", status);
+          return;
+        }
+        const results = response.rows[0].elements;
+        cachedResults[cacheKey] = results;
+        applyFilter(results, radius, commuteTime);
+      }
+    );
+  }
+
+  // --- Apply commute + radius logic ---
+  function applyFilter(results, radius, commuteTime) {
+    let visibleCount = 0;
+    jobMarkers.forEach(({ marker, job }, i) => {
+      const element = results[i];
+      let visible = false;
+
+      if (element.status === "OK") {
+        const miles = element.distance.value / 1609.34;
+        const mins = element.duration.value / 60;
+
+        // ✅ Only show if within commute time OR within distance radius
+        if (miles <= radius || mins <= commuteTime) {
+          visible = true;
+          visibleCount++;
+        }
+      }
+      marker.setVisible(visible);
+    });
+
+    document.getElementById("jobCountText").textContent =
+      `Showing ${visibleCount} job(s) within ${radius} miles or ${commuteTime} minutes.`;
+  }
+</script>
+
+<!-- ✅ Safe API key reference -->
+<script async defer
+  src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&callback=initMap">
+</script>
+{% endblock %}
