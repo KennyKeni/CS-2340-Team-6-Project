@@ -110,17 +110,21 @@ class JobPostingForm(forms.ModelForm):
         JobSkill.objects.filter(job=job).delete()
 
         required_skills = self.cleaned_data.get('required_skills', [])
+        created_skills = set()
+
         for skill_name in required_skills:
             JobSkill.objects.create(
                 job=job,
                 skill_name=skill_name,
                 importance_level='required'
             )
+            created_skills.add(skill_name)
 
         preferred_skills = self.cleaned_data.get('preferred_skills', [])
         for skill_name in preferred_skills:
-            JobSkill.objects.create(
-                job=job,
-                skill_name=skill_name,
-                importance_level='preferred'
-            )
+            if skill_name not in created_skills:
+                JobSkill.objects.create(
+                    job=job,
+                    skill_name=skill_name,
+                    importance_level='preferred'
+                )
