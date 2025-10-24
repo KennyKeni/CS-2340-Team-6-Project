@@ -38,6 +38,19 @@
               </small>
             </p>
             <p class="card-text">{{ job.description|truncatewords:30 }}</p>
+            {% if job.required_skills.exists %}
+              <div class="mb-2">
+                <small class="text-muted">Required Skills:</small>
+                <div class="d-flex flex-wrap gap-1">
+                  {% for skill in job.required_skills.all|slice:":5" %}
+                    <span class="badge bg-secondary">{{ skill.skill_name }}</span>
+                  {% endfor %}
+                  {% if job.required_skills.count > 5 %}
+                    <span class="badge bg-light text-dark">+{{ job.required_skills.count|add:"-5" }} more</span>
+                  {% endif %}
+                </div>
+              </div>
+            {% endif %}
             {% if job.salary_min and job.salary_max %}
               <p class="text-success fw-semibold mb-0">
                 Salary Range: ${{ job.salary_min|floatformat:0 }} - ${{ job.salary_max|floatformat:0 }} {{ job.salary_currency }}

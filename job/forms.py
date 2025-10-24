@@ -9,6 +9,26 @@ class JobPostingForm(forms.ModelForm):
         input_formats=["%Y-%m-%dT%H:%M"],  # matches <input type="datetime-local">
     )
 
+    required_skills = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={
+            "class": "form-control",
+            "rows": 2,
+            "placeholder": "Enter required skills (comma-separated, e.g., Python, Django, React)"
+        }),
+        help_text="Comma-separated list of required skills"
+    )
+
+    preferred_skills = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={
+            "class": "form-control",
+            "rows": 2,
+            "placeholder": "Enter preferred skills (comma-separated, e.g., Docker, AWS)"
+        }),
+        help_text="Comma-separated list of preferred skills"
+    )
+
     class Meta:
         model = JobPosting
         fields = [
@@ -49,8 +69,58 @@ class JobPostingForm(forms.ModelForm):
         for name in ["street_address", "city", "state", "zip_code"]:
             self.fields[name].required = True
 
+        # Populate skills fields from existing JobSkill instances if editing
+        if self.instance and self.instance.pk:
+            from .models import JobSkill
+            required_skills = JobSkill.objects.filter(
+                job=self.instance,
+                importance_level='required'
+            ).values_list('skill_name', flat=True)
+            preferred_skills = JobSkill.objects.filter(
+                job=self.instance,
+                importance_level='preferred'
+            ).values_list('skill_name', flat=True)
+
+            if required_skills:
+                self.fields['required_skills'].initial = ', '.join(required_skills)
+            if preferred_skills:
+                self.fields['preferred_skills'].initial = ', '.join(preferred_skills)
+
     def clean_salary_currency(self):
         val = (self.cleaned_data.get("salary_currency") or "").strip()
         if not val:
             return "USD"
         return val.upper()[:3]
+
+    def clean_required_skills(self):
+        skills_str = self.cleaned_data.get('required_skills', '').strip()
+        if not skills_str:
+            return []
+        return [s.strip() for s in skills_str.split(',') if s.strip()]
+
+    def clean_preferred_skills(self):
+        skills_str = self.cleaned_data.get('preferred_skills', '').strip()
+        if not skills_str:
+            return []
+        return [s.strip() for s in skills_str.split(',') if s.strip()]
+
+    def save_skills(self, job):
+        from .models import JobSkill
+
+        JobSkill.objects.filter(job=job).delete()
+
+        required_skills = self.cleaned_data.get('required_skills', [])
+        for skill_name in required_skills:
+            JobSkill.objects.create(
+                job=job,
+                skill_name=skill_name,
+                importance_level='required'
+            )
+
+        preferred_skills = self.cleaned_data.get('preferred_skills', [])
+        for skill_name in preferred_skills:
+            JobSkill.objects.create(
+                job=job,
+                skill_name=skill_name,
+                importance_level='preferred'
+            )

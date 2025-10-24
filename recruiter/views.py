@@ -163,6 +163,7 @@ def job_create(request):
             job.longitude = longitude
 
         job.save()
+        form.save_skills(job)
         messages.success(request, "Job posting created.")
         return redirect("recruiter:jobs")
 
@@ -224,6 +225,7 @@ def job_update(request, pk: int):
             job.longitude = longitude
 
         job.save()
+        form.save_skills(job)
         messages.success(request, "Job posting updated.")
         return redirect("recruiter:jobs")
 
