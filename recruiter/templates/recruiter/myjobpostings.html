@@ -86,17 +86,40 @@
             {% if form.title.errors %}<div class="text-danger small">{{ form.title.errors }}</div>{% endif %}
           </div>
 
+          <div class="mb-3">
+            <label class="form-label" for="id_company">Company *</label>
+            {{ form.company }}
+            {% if form.company.errors %}<div class="text-danger small">{{ form.company.errors }}</div>{% endif %}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label" for="id_street_address">Street Address *</label>
+            {{ form.street_address }}
+            {% if form.street_address.errors %}<div class="text-danger small">{{ form.street_address.errors }}</div>{% endif %}
+          </div>
+
           <div class="row">
-            <div class="col-md-6 mb-3">
-              <label class="form-label" for="id_company">Company *</label>
-              {{ form.company }}
-              {% if form.company.errors %}<div class="text-danger small">{{ form.company.errors }}</div>{% endif %}
+            <div class="col-md-5 mb-3">
+              <label class="form-label" for="id_city">City *</label>
+              {{ form.city }}
+              {% if form.city.errors %}<div class="text-danger small">{{ form.city.errors }}</div>{% endif %}
             </div>
-            <div class="col-md-6 mb-3">
-              <label class="form-label" for="id_location">Location *</label>
-              {{ form.location }}
-              {% if form.location.errors %}<div class="text-danger small">{{ form.location.errors }}</div>{% endif %}
+            <div class="col-md-4 mb-3">
+              <label class="form-label" for="id_state">State/Province *</label>
+              {{ form.state }}
+              {% if form.state.errors %}<div class="text-danger small">{{ form.state.errors }}</div>{% endif %}
             </div>
+            <div class="col-md-3 mb-3">
+              <label class="form-label" for="id_zip_code">ZIP Code *</label>
+              {{ form.zip_code }}
+              {% if form.zip_code.errors %}<div class="text-danger small">{{ form.zip_code.errors }}</div>{% endif %}
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label" for="id_country">Country</label>
+            {{ form.country }}
+            {% if form.country.errors %}<div class="text-danger small">{{ form.country.errors }}</div>{% endif %}
           </div>
 
           <div class="mb-3">

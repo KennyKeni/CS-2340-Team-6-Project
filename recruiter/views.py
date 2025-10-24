@@ -15,6 +15,7 @@ from .forms import MessageForm, SavedSearchForm, CandidateEmailForm
 from .models import Recruiter, Notification, Message, SavedSearch, CandidateEmail
 from job.forms import JobPostingForm
 from job.models import JobPosting
+from job.utils import geocode_address
 from applicant.models import Applicant
 from account.models import Account
 from utils.messaging import get_messages_context
@@ -148,6 +149,19 @@ def job_create(request):
     if form.is_valid():
         job = form.save(commit=False)
         job.owner = request.user
+
+        # Geocode the address to get latitude and longitude
+        latitude, longitude = geocode_address(
+            street_address=job.street_address,
+            city=job.city,
+            state=job.state,
+            zip_code=job.zip_code,
+            country=job.country
+        )
+        if latitude and longitude:
+            job.latitude = latitude
+            job.longitude = longitude
+
         job.save()
         messages.success(request, "Job posting created.")
         return redirect("recruiter:jobs")
@@ -195,7 +209,21 @@ def job_update(request, pk: int):
     # POST
     form = JobPostingForm(request.POST, instance=job)
     if form.is_valid():
-        form.save()
+        job = form.save(commit=False)
+
+        # Geocode the address to get latitude and longitude
+        latitude, longitude = geocode_address(
+            street_address=job.street_address,
+            city=job.city,
+            state=job.state,
+            zip_code=job.zip_code,
+            country=job.country
+        )
+        if latitude and longitude:
+            job.latitude = latitude
+            job.longitude = longitude
+
+        job.save()
         messages.success(request, "Job posting updated.")
         return redirect("recruiter:jobs")
 

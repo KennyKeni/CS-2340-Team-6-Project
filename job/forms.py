@@ -12,14 +12,19 @@ class JobPostingForm(forms.ModelForm):
     class Meta:
         model = JobPosting
         fields = [
-            "title", "company", "location", "job_type", "description",
+            "title", "company", "street_address", "city", "state",
+            "zip_code", "country", "job_type", "description",
             "requirements", "benefits", "salary_min", "salary_max",
             "salary_currency", "application_deadline",
         ]
         widgets = {
             "title": forms.TextInput(attrs={"class": "form-control", "placeholder": "Job Title"}),
             "company": forms.TextInput(attrs={"class": "form-control", "placeholder": "Company Name"}),
-            "location": forms.TextInput(attrs={"class": "form-control", "placeholder": "Location"}),
+            "street_address": forms.TextInput(attrs={"class": "form-control", "placeholder": "Street Address"}),
+            "city": forms.TextInput(attrs={"class": "form-control", "placeholder": "City"}),
+            "state": forms.TextInput(attrs={"class": "form-control", "placeholder": "State/Province"}),
+            "zip_code": forms.TextInput(attrs={"class": "form-control", "placeholder": "ZIP/Postal Code"}),
+            "country": forms.TextInput(attrs={"class": "form-control", "placeholder": "Country"}),
             "job_type": forms.Select(attrs={"class": "form-control"}),
             "description": forms.Textarea(attrs={"class": "form-control", "rows": 4, "placeholder": "Job description and summary"}),
             "requirements": forms.Textarea(attrs={"class": "form-control", "rows": 4, "placeholder": "Job requirements"}),
@@ -34,9 +39,15 @@ class JobPostingForm(forms.ModelForm):
         # Nice default in the input (still overridable by user)
         if not self.initial.get("salary_currency"):
             self.fields["salary_currency"].initial = "USD"
+        if not self.initial.get("country"):
+            self.fields["country"].initial = "USA"
         # These are optional at the model level; keep the form consistent
         for name in ["requirements", "benefits", "salary_min", "salary_max", "application_deadline"]:
             self.fields[name].required = False
+
+        # Make address fields required for accurate geocoding
+        for name in ["street_address", "city", "state", "zip_code"]:
+            self.fields[name].required = True
 
     def clean_salary_currency(self):
         val = (self.cleaned_data.get("salary_currency") or "").strip()

@@ -14,6 +14,12 @@ class JobPosting(models.Model):
     company = models.CharField(max_length=200, default="")
     location = models.CharField(max_length=200, default="")
 
+    street_address = models.CharField(max_length=200, blank=True, help_text="Street address")
+    city = models.CharField(max_length=100, blank=True, help_text="City")
+    state = models.CharField(max_length=100, blank=True, help_text="State/Province")
+    zip_code = models.CharField(max_length=20, blank=True, help_text="ZIP/Postal code")
+    country = models.CharField(max_length=100, blank=True, default="USA", help_text="Country")
+
     # 🌍 Added for User Story 7–9
     latitude = models.FloatField(null=True, blank=True, help_text="Latitude for map display")
     longitude = models.FloatField(null=True, blank=True, help_text="Longitude for map display")
