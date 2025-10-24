@@ -159,13 +159,9 @@ class SavedSearch(models.Model):
 
     # Search criteria
     skills = models.JSONField(default=list, help_text="List of required skills")
-    location = models.CharField(max_length=200, blank=True)
-    min_experience = models.PositiveIntegerField(null=True, blank=True)
-    max_experience = models.PositiveIntegerField(null=True, blank=True)
-    education_level = models.CharField(max_length=100, blank=True)
-    job_types = models.JSONField(default=list, help_text="List of preferred job types")
-    salary_min = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    salary_max = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    city = models.CharField(max_length=100, blank=True, help_text="City to search for candidates")
+    state = models.CharField(max_length=100, blank=True, help_text="State to search for candidates")
+    country = models.CharField(max_length=100, blank=True, help_text="Country to search for candidates")
 
     # Metadata
     is_active = models.BooleanField(default=True)

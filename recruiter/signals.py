@@ -76,54 +76,30 @@ def notify_saved_searches_on_skill_update(sender, instance, created, **kwargs):
 def matches_saved_search(candidate, search):
     """
     Check if a candidate matches the criteria in a saved search.
+    Requires exact matches for all specified criteria.
     """
-    # Check skills match
+    # Check skills match - candidate must have ALL specified skills
     if search.skills:
-        candidate_skills = candidate.skills.values_list('skill_name', flat=True)
-        if not any(skill in candidate_skills for skill in search.skills):
+        candidate_skills = [skill.lower() for skill in candidate.skills.values_list('skill_name', flat=True)]
+        required_skills = [skill.lower() for skill in search.skills]
+        
+        # Check if candidate has ALL required skills
+        for required_skill in required_skills:
+            if not any(required_skill in candidate_skill for candidate_skill in candidate_skills):
+                return False
+    
+    # Check location match - candidate must match ALL specified location fields exactly
+    if search.city:
+        if not candidate.account.city or search.city.lower() not in candidate.account.city.lower():
             return False
     
-    # Check location match
-    if search.location:
-        location_match = False
-        if search.location.lower() in candidate.account.city.lower():
-            location_match = True
-        elif search.location.lower() in candidate.account.state.lower():
-            location_match = True
-        elif search.location.lower() in candidate.account.country.lower():
-            location_match = True
-        
-        if not location_match:
+    if search.state:
+        if not candidate.account.state or search.state.lower() not in candidate.account.state.lower():
             return False
     
-    # Check experience match (if specified)
-    if search.min_experience or search.max_experience:
-        # Calculate total experience from work experiences
-        total_experience = 0
-        for exp in candidate.work_experiences.all():
-            if exp.end_date:
-                duration = exp.end_date - exp.start_date
-                total_experience += duration.days / 365.25
-            elif exp.is_current:
-                duration = timezone.now().date() - exp.start_date
-                total_experience += duration.days / 365.25
-        
-        if search.min_experience and total_experience < search.min_experience:
-            return False
-        
-        if search.max_experience and total_experience > search.max_experience:
+    if search.country:
+        if not candidate.account.country or search.country.lower() not in candidate.account.country.lower():
             return False
     
-    # Check education level match
-    if search.education_level:
-        education_match = False
-        for edu in candidate.education.all():
-            if search.education_level.lower() in edu.degree.lower():
-                education_match = True
-                break
-        
-        if not education_match:
-            return False
-    
-    # If we get here, the candidate matches the search criteria
+    # If we get here, the candidate matches ALL the search criteria
     return True

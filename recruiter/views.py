@@ -349,7 +349,7 @@ def send_message(request, recipient_id):
     recipient = get_object_or_404(Account, id=recipient_id)
     
     if request.method == 'POST':
-        form = MessageForm(request.POST, sender=request.user)
+        form = MessageForm(request.POST, sender=request.user, recipient=recipient)
         if form.is_valid():
             message = form.save(commit=False)
             message.sender = request.user
@@ -367,9 +367,14 @@ def send_message(request, recipient_id):
             )
 
             messages.success(request, f'Message sent to {recipient.get_full_name()}!')
-            return redirect(f"{reverse('recruiter:messages')}?partner_id={recipient.id}")
+            
+            # Redirect to appropriate messages page based on user type
+            if hasattr(request.user, 'applicant'):
+                return redirect(f"{reverse('applicant:messages')}?partner_id={recipient.id}")
+            else:
+                return redirect(f"{reverse('recruiter:messages')}?partner_id={recipient.id}")
     else:
-        form = MessageForm(sender=request.user)
+        form = MessageForm(sender=request.user, recipient=recipient)
     
     context = {
         'form': form,
@@ -428,7 +433,6 @@ def save_search(request, search_id=None):
             
             # The form's clean methods already convert comma-separated strings to lists
             search.skills = form.cleaned_data.get('skills', [])
-            search.job_types = form.cleaned_data.get('job_types', [])
             
             search.save()
             messages.success(request, 'Search saved successfully!')
@@ -441,9 +445,9 @@ def save_search(request, search_id=None):
             # Pre-populate form with current search parameters
             form = SavedSearchForm(initial={
                 'skills': request.GET.get('skills', ''),
-                'location': request.GET.get('location', ''),
-                'min_experience': request.GET.get('min_experience', ''),
-                'max_experience': request.GET.get('max_experience', ''),
+                'city': request.GET.get('city', ''),
+                'state': request.GET.get('state', ''),
+                'country': request.GET.get('country', ''),
             })
     
     context = {

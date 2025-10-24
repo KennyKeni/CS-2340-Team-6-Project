@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load recruiter_utils %}
+{% load applicant_utils %}
 
 {% block content %}
 <div class="row justify-content-center">
@@ -46,6 +47,9 @@
             {% if form.related_job.help_text %}
               <div class="form-text">{{ form.related_job.help_text }}</div>
             {% endif %}
+            {% if user|is_applicant and not form.related_job.help_text %}
+            <div class="form-text">Select a job posting from {{ recipient.get_full_name }} that this message relates to (optional)</div>
+            {% endif %}
             {% if form.related_job.errors %}
               <div class="text-danger">
                 {% for error in form.related_job.errors %}
@@ -57,7 +61,11 @@
           {% endif %}
 
           <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+            {% if user|is_applicant %}
+            <a href="{% url 'applicant:messages' %}" class="btn btn-secondary me-md-2">Cancel</a>
+            {% else %}
             <a href="{% url 'recruiter:messages' %}" class="btn btn-secondary me-md-2">Cancel</a>
+            {% endif %}
             <button type="submit" class="btn btn-primary">
               <i class="bi bi-send"></i> Send Message
             </button>

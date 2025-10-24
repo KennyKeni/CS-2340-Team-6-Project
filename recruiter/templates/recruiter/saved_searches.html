@@ -32,7 +32,7 @@
                   <i class="bi bi-three-dots"></i>
                 </button>
                 <ul class="dropdown-menu">
-                  <li><a class="dropdown-item" href="{% url 'recruiter:candidate_search' %}?{% for skill in search.skills %}skills={{ skill }}&{% endfor %}location={{ search.location }}&min_experience={{ search.min_experience }}&max_experience={{ search.max_experience }}">
+                  <li><a class="dropdown-item" href="{% url 'recruiter:candidate_search' %}?{% for skill in search.skills %}skills={{ skill }}&{% endfor %}city={{ search.city }}&state={{ search.state }}&country={{ search.country }}">
                     <i class="bi bi-search"></i> Run Search
                   </a></li>
                   <li><a class="dropdown-item" href="{% url 'recruiter:edit_saved_search' search.id %}">
@@ -53,35 +53,12 @@
                 </p>
                 {% endif %}
                 
-                {% if search.location %}
+                {% if search.city or search.state or search.country %}
                 <p class="mb-1">
-                  <strong>Location:</strong> {{ search.location }}
-                </p>
-                {% endif %}
-                
-                {% if search.min_experience or search.max_experience %}
-                <p class="mb-1">
-                  <strong>Experience:</strong> 
-                  {% if search.min_experience %}{{ search.min_experience }}{% else %}0{% endif %} - 
-                  {% if search.max_experience %}{{ search.max_experience }}{% else %}∞{% endif %} years
-                </p>
-                {% endif %}
-                
-                {% if search.education_level %}
-                <p class="mb-1">
-                  <strong>Education:</strong> {{ search.education_level }}
-                </p>
-                {% endif %}
-                
-                {% if search.job_types %}
-                <p class="mb-1">
-                  <strong>Job Types:</strong> {{ search.job_types|join:", " }}
-                </p>
-                {% endif %}
-                
-                {% if search.salary_min or search.salary_max %}
-                <p class="mb-1">
-                  <strong>Salary:</strong> ${{ search.salary_min|default:"0" }} - ${{ search.salary_max|default:"∞" }}
+                  <strong>Location:</strong> 
+                  {% if search.city %}{{ search.city }}{% endif %}
+                  {% if search.state %}{% if search.city %}, {% endif %}{{ search.state }}{% endif %}
+                  {% if search.country %}{% if search.city or search.state %}, {% endif %}{{ search.country }}{% endif %}
                 </p>
                 {% endif %}
               </div>
