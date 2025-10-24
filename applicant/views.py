@@ -381,18 +381,30 @@ def create_profile(request):
             applicant.save()
 
             # Update commute preferences on Account model
-            if 'preferred_commute_radius' in data:
+            commute_radius_value = data.get('preferred_commute_radius', '').strip()
+            if commute_radius_value:
                 try:
-                    user.preferred_commute_radius = int(data.get('preferred_commute_radius')) if data.get('preferred_commute_radius') else None
-                except ValueError:
-                    pass
-            if 'preferred_commute_mode' in data:
-                user.preferred_commute_mode = data.get('preferred_commute_mode', 'driving')
-            if 'preferred_commute_time' in data:
+                    user.preferred_commute_radius = float(commute_radius_value)
+                except (ValueError, TypeError):
+                    user.preferred_commute_radius = None
+            else:
+                user.preferred_commute_radius = None
+
+            commute_mode = data.get('preferred_commute_mode', '').strip()
+            if commute_mode in ['driving', 'transit', 'walking', 'bicycling']:
+                user.preferred_commute_mode = commute_mode
+            else:
+                user.preferred_commute_mode = 'driving'  # Default
+
+            commute_time_value = data.get('preferred_commute_time', '').strip()
+            if commute_time_value:
                 try:
-                    user.preferred_commute_time = int(data.get('preferred_commute_time')) if data.get('preferred_commute_time') else None
-                except ValueError:
-                    pass
+                    user.preferred_commute_time = int(commute_time_value)
+                except (ValueError, TypeError):
+                    user.preferred_commute_time = None
+            else:
+                user.preferred_commute_time = None
+
             user.save()
 
             # Handle work experiences
