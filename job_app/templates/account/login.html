@@ -85,15 +85,40 @@
           // Redirect to home page for all users after successful login
           window.location.href = '{% url "home:index" %}';
         } else {
+          // Remove any existing error messages
+          const existingError = this.querySelector(".alert-danger");
+          if (existingError) {
+            existingError.remove();
+          }
+
           // Show error message
           const errorDiv = document.createElement("div");
           errorDiv.className = "alert alert-danger mt-3";
-          errorDiv.textContent =
-            result.error || "Login failed. Please try again.";
+
+          // Handle different error formats
+          let errorMessage = "Login failed. Please try again.";
+          if (result.error) {
+            errorMessage = result.error;
+          } else if (result.errors) {
+            // If errors is an object, format it nicely
+            if (typeof result.errors === 'object') {
+              errorMessage = Object.values(result.errors).flat().join(' ');
+            } else {
+              errorMessage = result.errors;
+            }
+          }
+
+          errorDiv.textContent = errorMessage;
           this.appendChild(errorDiv);
         }
       } catch (error) {
         console.error("Error:", error);
+        // Remove any existing error messages
+        const existingError = this.querySelector(".alert-danger");
+        if (existingError) {
+          existingError.remove();
+        }
+
         const errorDiv = document.createElement("div");
         errorDiv.className = "alert alert-danger mt-3";
         errorDiv.textContent = "An error occurred. Please try again.";

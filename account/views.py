@@ -97,23 +97,33 @@ def account_login(request) -> HttpResponse:
         except json.JSONDecodeError:
             return JsonResponse({"error": "Invalid JSON"}, status=400)
 
+        username = data.get("username")
+        password = data.get("password")
+
+        # Check if account exists and is banned before form validation
+        if username:
+            try:
+                account = Account.objects.get(username=username)
+                if not account.is_active:
+                    return JsonResponse(
+                        {
+                            "success": False,
+                            "error": "Account Disabled: Your account has been deactivated by an administrator. Please contact support for assistance.",
+                        },
+                        status=403,
+                    )
+            except Account.DoesNotExist:
+                pass
+
         form = CustomAuthenticationForm(data=data)
         if form.is_valid():
             username = form.cleaned_data["username"]
             password = form.cleaned_data["password"]
+
             user = authenticate(request, username=username, password=password)
 
             if user is not None:
                 account_user = cast(Account, user)
-
-                if not account_user.is_active:
-                    return JsonResponse(
-                        {
-                            "success": False,
-                            "error": "Your account has been banned. Please contact support.",
-                        },
-                        status=403,
-                    )
 
                 login(request, account_user)
                 return JsonResponse(
