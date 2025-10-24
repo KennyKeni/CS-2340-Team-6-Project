@@ -27,16 +27,32 @@ class MessageForm(forms.ModelForm):
         
     def __init__(self, *args, **kwargs):
         sender = kwargs.pop('sender', None)
+        recipient = kwargs.pop('recipient', None)
         super().__init__(*args, **kwargs)
         
-        # Only show jobs owned by the current sender if they're a recruiter
+        # Show different jobs based on sender type
         if sender and hasattr(sender, 'recruiter'):
+            # For recruiters: show jobs they own
             self.fields['related_job'].queryset = JobPosting.objects.filter(
                 owner=sender,
                 is_active=True
             )
             self.fields['related_job'].empty_label = "Select a related job (optional)"
+        elif sender and hasattr(sender, 'applicant'):
+            # For applicants: show all active job postings from the recruiter they're messaging
+            if recipient and hasattr(recipient, 'recruiter'):
+                # Show all active jobs from this recruiter
+                self.fields['related_job'].queryset = JobPosting.objects.filter(
+                    owner=recipient,
+                    is_active=True
+                )
+            else:
+                # If recipient is not a recruiter, show no jobs
+                self.fields['related_job'].queryset = JobPosting.objects.none()
+            
+            self.fields['related_job'].empty_label = "Select a related job (optional)"
         else:
+            # For other users: hide the field
             self.fields['related_job'].queryset = JobPosting.objects.none()
             self.fields['related_job'].widget = forms.HiddenInput()
         
