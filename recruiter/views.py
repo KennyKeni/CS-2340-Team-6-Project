@@ -400,7 +400,6 @@ def save_search(request, search_id=None):
             
             # The form's clean methods already convert comma-separated strings to lists
             search.skills = form.cleaned_data.get('skills', [])
-            search.job_types = form.cleaned_data.get('job_types', [])
             
             search.save()
             messages.success(request, 'Search saved successfully!')
@@ -413,9 +412,9 @@ def save_search(request, search_id=None):
             # Pre-populate form with current search parameters
             form = SavedSearchForm(initial={
                 'skills': request.GET.get('skills', ''),
-                'location': request.GET.get('location', ''),
-                'min_experience': request.GET.get('min_experience', ''),
-                'max_experience': request.GET.get('max_experience', ''),
+                'city': request.GET.get('city', ''),
+                'state': request.GET.get('state', ''),
+                'country': request.GET.get('country', ''),
             })
     
     context = {
