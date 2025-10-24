@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.mail import send_mail
 from django.core.paginator import Paginator
 from django.conf import settings
 from django.db.models import Q
@@ -10,8 +11,8 @@ from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 
 from .decorators import recruiter_required
-from .forms import MessageForm, SavedSearchForm
-from .models import Recruiter, Notification, Message, SavedSearch
+from .forms import MessageForm, SavedSearchForm, CandidateEmailForm
+from .models import Recruiter, Notification, Message, SavedSearch, CandidateEmail
 from job.forms import JobPostingForm
 from job.models import JobPosting
 from applicant.models import Applicant
@@ -441,3 +442,78 @@ def get_unread_notifications_count(request):
     """API endpoint to get unread notifications count"""
     count = Notification.objects.filter(recipient=request.user, is_read=False).count()
     return JsonResponse({'count': count})
+
+
+@login_required
+@recruiter_required
+def compose_email(request, candidate_id):
+    """View for recruiters to compose and send emails to candidates"""
+    candidate = get_object_or_404(Account, id=candidate_id)
+    recruiter = request.user.recruiter
+
+    # Ensure the candidate is actually an applicant
+    if not hasattr(candidate, 'applicant'):
+        messages.error(request, "The specified user is not a candidate.")
+        return redirect('recruiter:candidate_search')
+
+    if request.method == 'POST':
+        form = CandidateEmailForm(request.POST, recruiter=recruiter)
+        if form.is_valid():
+            email = form.save(commit=False)
+            email.sender = request.user
+            email.recipient = candidate
+
+            # Try to send the email
+            try:
+                # Add recruiter signature to email body
+                email_body_with_signature = f"{email.body}\n\n---\n{request.user.first_name} {request.user.last_name}\n{request.user.email}"
+
+                send_mail(
+                    subject=f"{settings.EMAIL_SUBJECT_PREFIX}{email.subject}",
+                    message=email_body_with_signature,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[candidate.email],
+                    fail_silently=False,
+                )
+                email.is_sent = True
+                messages.success(request, f"Email sent successfully to {candidate.get_full_name()}!")
+            except Exception as e:
+                email.is_sent = False
+                email.error_message = str(e)
+                messages.error(request, f"Failed to send email: {str(e)}")
+
+            email.save()
+            return redirect('recruiter:email_history')
+    else:
+        form = CandidateEmailForm(recruiter=recruiter)
+
+    context = {
+        'form': form,
+        'candidate': candidate,
+        'template_data': {
+            'title': f'Email {candidate.get_full_name()} · DevJobs'
+        }
+    }
+    return render(request, 'recruiter/compose_email.html', context)
+
+
+@login_required
+@recruiter_required
+def email_history(request):
+    """View to show email history for the current recruiter"""
+    emails = CandidateEmail.objects.filter(
+        sender=request.user
+    ).select_related('recipient', 'related_job').order_by('-sent_at')
+
+    # Pagination
+    paginator = Paginator(emails, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'emails': page_obj,
+        'template_data': {
+            'title': 'Email History · DevJobs'
+        }
+    }
+    return render(request, 'recruiter/email_history.html', context)
