@@ -321,7 +321,7 @@ def send_message(request, recipient_id):
     recipient = get_object_or_404(Account, id=recipient_id)
     
     if request.method == 'POST':
-        form = MessageForm(request.POST, sender=request.user)
+        form = MessageForm(request.POST, sender=request.user, recipient=recipient)
         if form.is_valid():
             message = form.save(commit=False)
             message.sender = request.user
@@ -339,9 +339,14 @@ def send_message(request, recipient_id):
             )
 
             messages.success(request, f'Message sent to {recipient.get_full_name()}!')
-            return redirect(f"{reverse('recruiter:messages')}?partner_id={recipient.id}")
+            
+            # Redirect to appropriate messages page based on user type
+            if hasattr(request.user, 'applicant'):
+                return redirect(f"{reverse('applicant:messages')}?partner_id={recipient.id}")
+            else:
+                return redirect(f"{reverse('recruiter:messages')}?partner_id={recipient.id}")
     else:
-        form = MessageForm(sender=request.user)
+        form = MessageForm(sender=request.user, recipient=recipient)
     
     context = {
         'form': form,
