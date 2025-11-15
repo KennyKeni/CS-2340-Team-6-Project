@@ -16,7 +16,7 @@ from .models import Recruiter, Notification, Message, SavedSearch, CandidateEmai
 from job.forms import JobPostingForm
 from job.models import JobPosting
 from job.utils import geocode_address
-from applicant.models import Applicant
+from applicant.models import Applicant, Application, ApplicationStatus
 from account.models import Account
 from utils.messaging import get_messages_context
 
@@ -551,3 +551,95 @@ def email_history(request):
         }
     }
     return render(request, 'recruiter/email_history.html', context)
+
+
+@login_required
+@recruiter_required
+def job_applications_pipeline(request, job_id):
+    """View to display applications for a specific job in a Kanban board format"""
+    # Get the job and verify the recruiter owns it
+    job = get_object_or_404(JobPosting, pk=job_id, owner=request.user)
+
+    # Get all applications for this job
+    applications = Application.objects.filter(job=job).select_related(
+        'applicant', 'applicant__applicant'
+    ).prefetch_related(
+        'applicant__applicant__skills'
+    ).order_by('-updated_at')
+
+    # Group applications by status for Kanban columns
+    applications_by_status = {
+        ApplicationStatus.APPLIED: [],
+        ApplicationStatus.REVIEW: [],
+        ApplicationStatus.INTERVIEW: [],
+        ApplicationStatus.OFFER: [],
+        ApplicationStatus.CLOSED: [],
+    }
+
+    for application in applications:
+        if application.status in applications_by_status:
+            applications_by_status[application.status].append(application)
+
+    context = {
+        'job': job,
+        'applications_by_status': applications_by_status,
+        'status_choices': ApplicationStatus.choices,
+        'template_data': {
+            'title': f'Applications: {job.title} · DevJobs'
+        }
+    }
+    return render(request, 'recruiter/job_applications_pipeline.html', context)
+
+
+@login_required
+@recruiter_required
+@require_http_methods(["POST"])
+def update_application_status(request):
+    """AJAX endpoint to update an application's status"""
+    try:
+        application_id = request.POST.get('application_id')
+        new_status = request.POST.get('status')
+
+        if not application_id or not new_status:
+            return JsonResponse({
+                'success': False,
+                'error': 'Missing application_id or status'
+            }, status=400)
+
+        # Validate status is valid
+        valid_statuses = [status[0] for status in ApplicationStatus.choices]
+        if new_status not in valid_statuses:
+            return JsonResponse({
+                'success': False,
+                'error': 'Invalid status value'
+            }, status=400)
+
+        # Get the application and verify the recruiter owns the job
+        application = get_object_or_404(Application, pk=application_id)
+
+        if application.job.owner != request.user:
+            return JsonResponse({
+                'success': False,
+                'error': 'You do not have permission to update this application'
+            }, status=403)
+
+        # Update the status
+        application.status = new_status
+        application.save()
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Application status updated successfully',
+            'new_status': application.get_status_display()
+        })
+
+    except Application.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Application not found'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)

@@ -1,0 +1,403 @@
+{% extends "base.html" %}
+{% load static %}
+{% load recruiter_utils %}
+
+{% block title %}Applications: {{ job.title }} · DevJobs{% endblock %}
+
+{% block extra_head %}
+<style>
+.kanban-board {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1rem;
+  overflow-x: auto;
+  padding-bottom: 1rem;
+}
+
+@media (max-width: 1200px) {
+  .kanban-board {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .kanban-board {
+    grid-template-columns: 1fr;
+  }
+}
+
+.kanban-column {
+  background: #fff;
+  border-radius: 8px;
+  padding: 1rem;
+  min-height: 500px;
+  border: 1px solid #dee2e6;
+}
+
+.kanban-column-header {
+  font-weight: 600;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #dee2e6;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.application-card {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+  cursor: move;
+  transition: all 0.2s;
+}
+
+.application-card:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transform: translateY(-2px);
+}
+
+.application-card.dragging {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+
+.kanban-column.drag-over {
+  background: #e7f3ff;
+  border: 2px solid #0d6efd;
+  box-shadow: 0 0 10px rgba(13, 110, 253, 0.3);
+}
+
+.applications-container {
+  min-height: 100px;
+  transition: background-color 0.2s ease;
+}
+
+.applicant-name {
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.applicant-date {
+  font-size: 0.875rem;
+  color: #6c757d;
+  margin-bottom: 0.5rem;
+}
+
+.applicant-skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.skill-badge {
+  background: #e9ecef;
+  color: #495057;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+.status-dropdown {
+  font-size: 0.875rem;
+}
+
+.column-count {
+  background: #6c757d;
+  color: white;
+  border-radius: 12px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'recruiter:jobs' %}">My Job Postings</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Applications</li>
+    </ol>
+  </nav>
+</div>
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h1 class="h4 m-0">{{ job.title }}</h1>
+    <p class="text-muted mb-0">{{ job.company }} • {{ job.location }}</p>
+  </div>
+  <a href="{% url 'recruiter:jobs' %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i> Back to Jobs
+  </a>
+</div>
+
+<div class="kanban-board">
+  {% for status_value, status_label in status_choices %}
+    <div class="kanban-column" data-status="{{ status_value }}">
+      <div class="kanban-column-header">
+        <span>{{ status_label }}</span>
+        <span class="column-count">{{ applications_by_status|lookup:status_value|length }}</span>
+      </div>
+
+      <div class="applications-container" data-status="{{ status_value }}">
+        {% for application in applications_by_status|lookup:status_value %}
+          <div class="application-card"
+               draggable="true"
+               data-application-id="{{ application.id }}"
+               data-status="{{ application.status }}">
+            <div class="applicant-name">
+              {{ application.applicant.get_full_name|default:application.applicant.username }}
+            </div>
+            <div class="applicant-date">
+              Applied {{ application.created_at|date:"M d, Y" }}
+            </div>
+
+            {% if application.applicant.applicant.skills.all %}
+              <div class="applicant-skills">
+                {% for skill in application.applicant.applicant.skills.all|slice:":5" %}
+                  <span class="skill-badge">{{ skill.skill_name }}</span>
+                {% endfor %}
+                {% if application.applicant.applicant.skills.all|length > 5 %}
+                  <span class="skill-badge">+{{ application.applicant.applicant.skills.all|length|add:"-5" }}</span>
+                {% endif %}
+              </div>
+            {% endif %}
+
+            <select class="form-select form-select-sm status-dropdown" data-application-id="{{ application.id }}">
+              {% for choice_value, choice_label in status_choices %}
+                <option value="{{ choice_value }}" {% if choice_value == application.status %}selected{% endif %}>
+                  {{ choice_label }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+        {% empty %}
+          <p class="text-muted small text-center mt-3">No applications</p>
+        {% endfor %}
+      </div>
+    </div>
+  {% endfor %}
+</div>
+
+<script>
+// Get CSRF token for AJAX requests
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+
+const csrftoken = getCookie('csrftoken');
+
+// Drag and Drop functionality
+let draggedElement = null;
+let currentDropTarget = null;
+
+// Initialize drag and drop on all cards
+function initializeDragAndDrop() {
+  const cards = document.querySelectorAll('.application-card');
+  const columns = document.querySelectorAll('.applications-container');
+
+  cards.forEach(card => {
+    card.addEventListener('dragstart', handleDragStart);
+    card.addEventListener('dragend', handleDragEnd);
+  });
+
+  columns.forEach(column => {
+    column.addEventListener('dragover', handleDragOver);
+    column.addEventListener('drop', handleDrop);
+    column.addEventListener('dragleave', handleDragLeave);
+    column.addEventListener('dragenter', handleDragEnter);
+  });
+}
+
+function handleDragStart(e) {
+  draggedElement = this;
+  this.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', this.dataset.applicationId);
+
+  // Set opacity on the element being dragged
+  setTimeout(() => {
+    this.style.opacity = '0.4';
+  }, 0);
+}
+
+function handleDragEnd(e) {
+  this.style.opacity = '1';
+  this.classList.remove('dragging');
+
+  // Remove all drag-over classes
+  document.querySelectorAll('.kanban-column').forEach(col => {
+    col.classList.remove('drag-over');
+  });
+
+  currentDropTarget = null;
+}
+
+function handleDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  return false;
+}
+
+function handleDragEnter(e) {
+  e.preventDefault();
+
+  // Only highlight if we're entering the applications-container itself
+  if (e.target.classList.contains('applications-container')) {
+    // Remove highlight from all columns first
+    document.querySelectorAll('.kanban-column').forEach(col => {
+      col.classList.remove('drag-over');
+    });
+
+    // Add highlight to current column
+    const column = e.target.closest('.kanban-column');
+    if (column) {
+      column.classList.add('drag-over');
+      currentDropTarget = e.target;
+    }
+  }
+}
+
+function handleDragLeave(e) {
+  e.preventDefault();
+
+  // Only remove highlight if we're actually leaving the container
+  if (e.target.classList.contains('applications-container') &&
+      !e.relatedTarget?.closest('.applications-container')) {
+    const column = e.target.closest('.kanban-column');
+    if (column) {
+      column.classList.remove('drag-over');
+    }
+  }
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  e.stopPropagation();
+
+  if (!draggedElement) return false;
+
+  // Find the applications-container that received the drop
+  let targetColumn = e.target.closest('.applications-container');
+
+  if (!targetColumn) return false;
+
+  const newStatus = targetColumn.dataset.status;
+  const applicationId = draggedElement.dataset.applicationId;
+  const oldStatus = draggedElement.dataset.status;
+
+  // Remove all highlights
+  document.querySelectorAll('.kanban-column').forEach(col => {
+    col.classList.remove('drag-over');
+  });
+
+  if (newStatus !== oldStatus) {
+    // Update the status via AJAX
+    updateApplicationStatus(applicationId, newStatus, draggedElement, targetColumn);
+  }
+
+  return false;
+}
+
+// Call initialization on page load
+initializeDragAndDrop();
+
+// Dropdown change handler
+document.querySelectorAll('.status-dropdown').forEach(dropdown => {
+  dropdown.addEventListener('change', function(e) {
+    const applicationId = this.dataset.applicationId;
+    const newStatus = this.value;
+    const card = this.closest('.application-card');
+    const targetColumn = document.querySelector(`.applications-container[data-status="${newStatus}"]`);
+
+    updateApplicationStatus(applicationId, newStatus, card, targetColumn);
+  });
+});
+
+function updateApplicationStatus(applicationId, newStatus, cardElement, targetColumn) {
+  // Disable the card during update
+  cardElement.style.pointerEvents = 'none';
+  cardElement.style.opacity = '0.6';
+
+  fetch('{% url "recruiter:update_application_status" %}', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-CSRFToken': csrftoken
+    },
+    body: `application_id=${applicationId}&status=${newStatus}`
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      // Move the card to the new column
+      targetColumn.appendChild(cardElement);
+      cardElement.dataset.status = newStatus;
+
+      // Update the dropdown to match
+      const dropdown = cardElement.querySelector('.status-dropdown');
+      dropdown.value = newStatus;
+
+      // Re-enable the card
+      cardElement.style.pointerEvents = 'auto';
+      cardElement.style.opacity = '1';
+
+      // Update column counts
+      updateColumnCounts();
+
+      // Re-initialize drag and drop (in case new cards were added)
+      initializeDragAndDrop();
+
+      // Show success message (optional)
+      console.log('Application status updated successfully');
+    } else {
+      alert('Error: ' + data.error);
+      // Revert dropdown if update failed
+      const dropdown = cardElement.querySelector('.status-dropdown');
+      dropdown.value = cardElement.dataset.status;
+
+      // Re-enable the card
+      cardElement.style.pointerEvents = 'auto';
+      cardElement.style.opacity = '1';
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('An error occurred while updating the application status');
+    // Revert dropdown if update failed
+    const dropdown = cardElement.querySelector('.status-dropdown');
+    dropdown.value = cardElement.dataset.status;
+
+    // Re-enable the card
+    cardElement.style.pointerEvents = 'auto';
+    cardElement.style.opacity = '1';
+  });
+}
+
+function updateColumnCounts() {
+  const allColumns = document.querySelectorAll('.applications-container');
+  allColumns.forEach(column => {
+    const status = column.dataset.status;
+    const count = column.querySelectorAll('.application-card').length;
+    const badge = column.closest('.kanban-column').querySelector('.column-count');
+    badge.textContent = count;
+  });
+}
+</script>
+{% endblock %}

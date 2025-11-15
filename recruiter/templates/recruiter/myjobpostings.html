@@ -27,17 +27,24 @@
               {{ job.description|truncatechars:180 }}
             </p>
 
-            <div class="mt-auto d-flex justify-content-between">
-              <!-- Edit (server renders modal prefilled) -->
-              <a href="{% url 'recruiter:job_update' job.pk %}" class="btn btn-sm btn-outline-secondary">
-                Edit
-              </a>
+            <div class="mt-auto">
+              <div class="d-flex justify-content-between mb-2">
+                <a href="{% url 'recruiter:job_applications' job.pk %}" class="btn btn-sm btn-primary">
+                  <i class="bi bi-kanban me-1"></i> Applications
+                </a>
+              </div>
+              <div class="d-flex justify-content-between">
+                <!-- Edit (server renders modal prefilled) -->
+                <a href="{% url 'recruiter:job_update' job.pk %}" class="btn btn-sm btn-outline-secondary">
+                  Edit
+                </a>
 
-              <!-- Delete -->
-              <form method="post" action="{% url 'recruiter:job_delete' job.pk %}" onsubmit="return confirm('Delete this job?');">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-              </form>
+                <!-- Delete -->
+                <form method="post" action="{% url 'recruiter:job_delete' job.pk %}" onsubmit="return confirm('Delete this job?');">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                </form>
+              </div>
             </div>
           </div>
         </div>
