@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+{% block title %}{{ template_data.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+  <div class="row mb-3">
+    <div class="col-12">
+      <h2 class="text-center mb-2 fw-bold">Candidate Location Map</h2>
+      <p class="text-center text-muted mb-3">
+        Explore where candidates are located. Blue markers = exact location, Orange markers = approximate (city-level).
+      </p>
+    </div>
+  </div>
+
+  <!-- Search Filters -->
+  <div class="row mb-3">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          <form method="GET" id="filterForm" class="row g-3">
+            <div class="col-md-3">
+              <label for="skills" class="form-label fw-semibold">Skills</label>
+              <input
+                type="text"
+                class="form-control"
+                id="skills"
+                name="skills"
+                placeholder="e.g., Python, JavaScript"
+                value="{{ filters.skills }}"
+              >
+              <small class="text-muted">Comma-separated</small>
+            </div>
+            <div class="col-md-3">
+              <label for="city" class="form-label fw-semibold">City</label>
+              <input
+                type="text"
+                class="form-control"
+                id="city"
+                name="city"
+                placeholder="e.g., Atlanta"
+                value="{{ filters.city }}"
+              >
+            </div>
+            <div class="col-md-3">
+              <label for="state" class="form-label fw-semibold">State</label>
+              <input
+                type="text"
+                class="form-control"
+                id="state"
+                name="state"
+                placeholder="e.g., Georgia"
+                value="{{ filters.state }}"
+              >
+            </div>
+            <div class="col-md-3">
+              <label for="country" class="form-label fw-semibold">Country</label>
+              <input
+                type="text"
+                class="form-control"
+                id="country"
+                name="country"
+                placeholder="e.g., USA"
+                value="{{ filters.country }}"
+              >
+            </div>
+            <div class="col-12">
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-search"></i> Apply Filters
+              </button>
+              <a href="{% url 'recruiter:candidate_map' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-x-circle"></i> Clear Filters
+              </a>
+              <a href="{% url 'recruiter:candidate_search' %}" class="btn btn-outline-primary ms-2">
+                <i class="bi bi-list"></i> List View
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Map Container -->
+  <div class="row">
+    <div class="col-12">
+      <div id="map" style="height: 600px; width: 100%; border-radius: 10px; border: 2px solid #dee2e6;"></div>
+      <p class="text-center text-muted mt-3" id="candidateCountText">
+        Showing {{ candidates_count }} candidate{{ candidates_count|pluralize }} on the map
+      </p>
+    </div>
+  </div>
+
+  <!-- Legend -->
+  <div class="row mt-3">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          <h6 class="fw-semibold mb-3">Map Legend</h6>
+          <div class="row">
+            <div class="col-md-4 d-flex align-items-center mb-2">
+              <div style="width: 20px; height: 20px; background-color: #4285F4; border-radius: 50%; margin-right: 10px;"></div>
+              <span>Exact Location (street address)</span>
+            </div>
+            <div class="col-md-4 d-flex align-items-center mb-2">
+              <div style="width: 20px; height: 20px; background-color: #FF9800; border-radius: 50%; margin-right: 10px;"></div>
+              <span>Approximate Location (city-level)</span>
+            </div>
+            <div class="col-md-4 d-flex align-items-center mb-2">
+              <i class="bi bi-geo-alt-fill text-primary me-2"></i>
+              <span>Cluster of multiple candidates</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Load MarkerClusterer library -->
+<script src="https://unpkg.com/@googlemaps/markerclusterer/dist/index.min.js"></script>
+
+<script>
+  let map;
+  let candidates = [];
+  let markers = [];
+  let markerCluster;
+
+  // Initialize Google Map
+  function initMap() {
+    // Default center (Atlanta, GA)
+    const defaultCenter = { lat: 33.7490, lng: -84.3880 };
+
+    map = new google.maps.Map(document.getElementById("map"), {
+      zoom: 6,
+      center: defaultCenter,
+      mapTypeControl: true,
+      streetViewControl: true,
+      fullscreenControl: true,
+    });
+
+    // Process candidates from Django context
+    if (candidates.length > 0) {
+      // Create markers for each candidate
+      candidates.forEach(candidate => {
+        createCandidateMarker(candidate);
+      });
+
+      // Add marker clustering
+      markerCluster = new markerClusterer.MarkerClusterer({
+        map,
+        markers,
+        renderer: {
+          render: ({ count, position }) => {
+            return new google.maps.Marker({
+              position,
+              icon: {
+                url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(
+                  `<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50">
+                    <circle cx="25" cy="25" r="20" fill="%234285F4" stroke="white" stroke-width="3"/>
+                    <text x="25" y="30" text-anchor="middle" font-size="16" fill="white" font-weight="bold">${count}</text>
+                  </svg>`
+                )}`,
+                scaledSize: new google.maps.Size(50, 50),
+              },
+              label: {
+                text: String(count),
+                color: "transparent",
+              },
+              zIndex: Number(google.maps.Marker.MAX_ZINDEX) + count,
+            });
+          }
+        }
+      });
+
+      // Auto-zoom to fit all markers
+      fitMapToBounds();
+    } else {
+      // No candidates, show message
+      document.getElementById('candidateCountText').innerHTML =
+        '<span class="text-warning">No candidates found with the current filters. Try adjusting your search criteria.</span>';
+    }
+  }
+
+  // Create marker for individual candidate
+  function createCandidateMarker(candidate) {
+    const position = {
+      lat: parseFloat(candidate.latitude),
+      lng: parseFloat(candidate.longitude)
+    };
+
+    // Choose marker color based on location type
+    const markerColor = candidate.location_type === 'exact' ? '#4285F4' : '#FF9800';
+
+    const marker = new google.maps.Marker({
+      position: position,
+      map: map,
+      title: candidate.name,
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 8,
+        fillColor: markerColor,
+        fillOpacity: 0.9,
+        strokeColor: '#FFFFFF',
+        strokeWeight: 2,
+      }
+    });
+
+    // Create info window content
+    const skills = candidate.skills && candidate.skills.length > 0
+      ? candidate.skills.join(', ')
+      : 'No skills listed';
+
+    const headline = candidate.headline || 'No headline';
+
+    const infoContent = `
+      <div style="max-width: 300px; padding: 10px;">
+        <h6 class="fw-bold mb-2">${candidate.name}</h6>
+        ${candidate.headline ? `<p class="mb-2 text-muted small">${candidate.headline}</p>` : ''}
+        <p class="mb-1 small">
+          <i class="bi bi-geo-alt"></i>
+          <strong>${candidate.location_type === 'exact' ? 'Location' : 'Approximate Location'}:</strong><br>
+          ${candidate.location}
+        </p>
+        ${candidate.skills.length > 0 ? `
+          <p class="mb-1 small">
+            <i class="bi bi-code-slash"></i>
+            <strong>Skills:</strong><br>
+            ${skills}
+          </p>
+        ` : ''}
+        ${candidate.email ? `
+          <p class="mb-2 small">
+            <i class="bi bi-envelope"></i>
+            <a href="mailto:${candidate.email}">${candidate.email}</a>
+          </p>
+        ` : ''}
+        <a href="{% url 'recruiter:candidate_search' %}?username=${encodeURIComponent(candidate.username)}"
+           class="btn btn-sm btn-primary mt-2" target="_blank">
+          View Profile
+        </a>
+      </div>
+    `;
+
+    const infoWindow = new google.maps.InfoWindow({
+      content: infoContent
+    });
+
+    marker.addListener('click', () => {
+      // Close all other info windows
+      markers.forEach(m => {
+        if (m.infoWindow) {
+          m.infoWindow.close();
+        }
+      });
+      infoWindow.open(map, marker);
+    });
+
+    // Store info window reference
+    marker.infoWindow = infoWindow;
+    markers.push(marker);
+  }
+
+  // Fit map bounds to show all markers
+  function fitMapToBounds() {
+    if (markers.length === 0) return;
+
+    const bounds = new google.maps.LatLngBounds();
+    markers.forEach(marker => {
+      bounds.extend(marker.getPosition());
+    });
+
+    map.fitBounds(bounds);
+
+    // Prevent too much zoom for single marker
+    const listener = google.maps.event.addListener(map, "idle", function() {
+      if (map.getZoom() > 15) map.setZoom(15);
+      google.maps.event.removeListener(listener);
+    });
+  }
+
+  // Parse candidates JSON from Django
+  try {
+    candidates = {{ candidates_json|safe }};
+    console.log('Loaded ' + candidates.length + ' candidates:', candidates);
+  } catch(e) {
+    console.error('Error parsing candidates:', e);
+    candidates = [];
+  }
+</script>
+
+<!-- Load Google Maps API -->
+<script async defer
+  src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&callback=initMap">
+</script>
+{% endblock %}

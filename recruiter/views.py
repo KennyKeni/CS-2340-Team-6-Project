@@ -272,6 +272,7 @@ def candidate_search(request):
 
     # Get search parameters
     q = request.GET.get('q', '').strip()  # Name/headline search
+    username = request.GET.get('username', '').strip()  # Exact username search
     skills = request.GET.get('skills', '').strip()
     projects = request.GET.get('projects', '').strip()  # Links search
     city = request.GET.get('city', '').strip()
@@ -279,7 +280,10 @@ def candidate_search(request):
     country = request.GET.get('country', '').strip()
 
     # Apply filters
-    if q:
+    if username:
+        # Exact username match (takes priority over q)
+        candidates = candidates.filter(account__username__iexact=username)
+    elif q:
         # Search in name (first_name, last_name, username) and headline
         candidates = candidates.filter(
             Q(account__first_name__icontains=q) |
@@ -643,3 +647,106 @@ def update_application_status(request):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+@login_required
+@recruiter_required
+def candidate_map(request):
+    """
+    Display candidates on an interactive map with location clustering.
+    Respects privacy settings for exact vs approximate locations.
+    """
+    # Get all visible applicants with geocoded locations and privacy settings
+    applicants = (
+        Applicant.objects
+        .select_related('account', 'privacy_settings')
+        .prefetch_related('skills')
+        .filter(
+            Q(privacy_settings__visible_to_recruiters=True) |
+            Q(privacy_settings__isnull=True)  # Include profiles without privacy settings
+        )
+        .filter(
+            account__latitude__isnull=False,
+            account__longitude__isnull=False
+        )
+    )
+
+    # Apply search filters from query parameters
+    skills = request.GET.get('skills')
+    if skills:
+        skill_list = [s.strip() for s in skills.split(',')]
+        for skill in skill_list:
+            applicants = applicants.filter(skills__skill_name__icontains=skill)
+
+    city = request.GET.get('city')
+    if city:
+        applicants = applicants.filter(account__city__icontains=city)
+
+    state = request.GET.get('state')
+    if state:
+        applicants = applicants.filter(account__state__icontains=state)
+
+    country = request.GET.get('country')
+    if country:
+        applicants = applicants.filter(account__country__icontains=country)
+
+    # Build candidate data for the map
+    candidates_data = []
+    for applicant in applicants.distinct():
+        privacy_settings = applicant.get_or_create_privacy_settings()
+
+        # Determine what location info to show based on privacy settings
+        show_exact = privacy_settings.show_exact_location
+        show_approx = privacy_settings.show_approximate_location
+
+        # Skip if both location settings are False
+        if not show_exact and not show_approx:
+            continue
+
+        # Get account data
+        account = applicant.account
+
+        # Determine location precision for display
+        if show_exact:
+            location_type = 'exact'
+            location_display = f"{account.street_address}, {account.city}, {account.state}" if account.street_address else f"{account.city}, {account.state}"
+        elif show_approx:
+            location_type = 'approximate'
+            location_display = f"{account.city}, {account.state}"
+        else:
+            continue  # Skip if no location to show
+
+        # Get top skills
+        top_skills = list(applicant.skills.values_list('skill_name', flat=True)[:5])
+
+        candidates_data.append({
+            'id': str(applicant.account.id),
+            'name': account.get_full_name() or account.username,
+            'username': account.username,
+            'headline': applicant.headline if privacy_settings.show_headline else '',
+            'location': location_display,
+            'location_type': location_type,  # 'exact' or 'approximate'
+            'latitude': account.latitude,
+            'longitude': account.longitude,
+            'skills': top_skills if privacy_settings.show_skills else [],
+            'email': account.email if privacy_settings.show_email else None,
+        })
+
+    import json
+
+    context = {
+        'template_data': {
+            'title': 'Candidate Map · DevJobs'
+        },
+        'candidates_json': json.dumps(candidates_data),
+        'candidates_count': len(candidates_data),
+        'google_maps_api_key': settings.GOOGLE_MAPS_API_KEY,
+        'filters': {
+            'skills': skills or '',
+            'city': city or '',
+            'state': state or '',
+            'country': country or '',
+        }
+    }
+
+    return render(request, 'recruiter/candidate_map.html', context)

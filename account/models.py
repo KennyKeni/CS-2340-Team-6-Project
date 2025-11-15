@@ -29,11 +29,15 @@ class Account(AbstractUser):
     )
 
     # Address fields
-    street_address = models.CharField(max_length=255)
+    street_address = models.CharField(max_length=255, blank=True, null=True)
     city = models.CharField(max_length=255)
     state = models.CharField(max_length=255)
     country = models.CharField(max_length=255)
     zip_code = models.CharField(max_length=255)
+
+    # Geographic coordinates (for map visualization)
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
 
     # 🚗 Commute preferences (new)
     COMMUTE_CHOICES = [

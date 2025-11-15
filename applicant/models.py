@@ -18,6 +18,8 @@ class ProfilePrivacySettings(models.Model):
     show_email = models.BooleanField(default=True, help_text="Allow recruiters to see your email")
     show_phone = models.BooleanField(default=True, help_text="Allow recruiters to see your phone number")
     show_location = models.BooleanField(default=True, help_text="Allow recruiters to see your location (city, state, country)")
+    show_exact_location = models.BooleanField(default=True, help_text="Show exact location (street address) on map")
+    show_approximate_location = models.BooleanField(default=True, help_text="Show approximate location (city/state) on map when exact location is hidden")
     
     # Professional Information
     show_resume = models.BooleanField(default=True, help_text="Allow recruiters to see your resume")

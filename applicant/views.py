@@ -506,6 +506,8 @@ def view_profile(request):
                 privacy_settings.show_email = settings_data.get('show_email', True)
                 privacy_settings.show_phone = settings_data.get('show_phone', True)
                 privacy_settings.show_location = settings_data.get('show_location', True)
+                privacy_settings.show_exact_location = settings_data.get('show_exact_location', True)
+                privacy_settings.show_approximate_location = settings_data.get('show_approximate_location', True)
                 privacy_settings.show_resume = settings_data.get('show_resume', True)
                 privacy_settings.show_headline = settings_data.get('show_headline', True)
                 privacy_settings.show_skills = settings_data.get('show_skills', True)
