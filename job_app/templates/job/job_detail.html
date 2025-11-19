@@ -50,6 +50,54 @@
         </div>
       </div>
 
+      <!-- Job Location Map -->
+      {% if job.latitude and job.longitude %}
+      <div class="card mb-4">
+        <div class="card-header">
+          <h5 class="mb-0"><i class="bi bi-geo-alt"></i> Office Location</h5>
+        </div>
+        <div class="card-body">
+          <p class="mb-3">
+            <i class="bi bi-pin-map"></i> 
+            {{ job.street_address }}, {{ job.city }}, {{ job.state }} {{ job.zip_code }}
+          </p>
+          
+          {# Show commute estimate for logged-in applicants with location #}
+          {% load applicant_utils %}
+          {% if user.is_authenticated and user|is_applicant and user.latitude and user.longitude %}
+          <div class="alert alert-info mb-3">
+            <i class="bi bi-car-front"></i> 
+            <strong>Estimated Commute:</strong> 
+            <span id="commuteInfo">Calculating...</span>
+          </div>
+          {% endif %}
+          
+          {% include "recruiter/components/job_location_map.html" with job=job interactive=False height="300px" map_id="jobDetailMap" %}
+          
+          <div class="mt-3 text-center">
+            <a href="https://www.google.com/maps/dir/?api=1&destination={{ job.latitude }},{{ job.longitude }}" 
+               target="_blank" 
+               class="btn btn-primary">
+              <i class="bi bi-signpost-2"></i> Get Directions
+            </a>
+          </div>
+        </div>
+      </div>
+      {% elif job.street_address %}
+      {# Graceful fallback when coordinates missing #}
+      <div class="card mb-4">
+        <div class="card-header">
+          <h5 class="mb-0"><i class="bi bi-geo-alt"></i> Office Location</h5>
+        </div>
+        <div class="card-body">
+          <p class="mb-0">
+            <i class="bi bi-pin-map"></i> 
+            {{ job.street_address }}, {{ job.city }}, {{ job.state }} {{ job.zip_code }}
+          </p>
+        </div>
+      </div>
+      {% endif %}
+
       <!-- Job Description -->
       <div class="card mb-4">
         <div class="card-header">
@@ -280,5 +328,59 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 });
+
+{# Calculate commute time for applicants #}
+{% load applicant_utils %}
+{% if user.is_authenticated and user|is_applicant and user.latitude and user.longitude and job.latitude and job.longitude %}
+// Calculate commute time using Distance Matrix API
+function calculateCommute() {
+  const service = new google.maps.DistanceMatrixService();
+  const origin = new google.maps.LatLng({{ user.latitude }}, {{ user.longitude }});
+  const destination = new google.maps.LatLng({{ job.latitude }}, {{ job.longitude }});
+  
+  service.getDistanceMatrix({
+    origins: [origin],
+    destinations: [destination],
+    travelMode: '{{ user.preferred_commute_method|default:"DRIVING" }}',
+    unitSystem: google.maps.UnitSystem.IMPERIAL,
+  }, (response, status) => {
+    if (status === 'OK' && response.rows[0].elements[0].status === 'OK') {
+      const element = response.rows[0].elements[0];
+      const distance = element.distance.text;
+      const duration = element.duration.text;
+      
+      const commuteInfo = document.getElementById('commuteInfo');
+      if (commuteInfo) {
+        commuteInfo.innerHTML = `
+          <strong>${duration}</strong> (${distance}) via {{ user.get_preferred_commute_method_display|default:"Driving" }}
+        `;
+      }
+    } else {
+      const commuteInfo = document.getElementById('commuteInfo');
+      if (commuteInfo) {
+        commuteInfo.textContent = 'Unable to calculate commute';
+      }
+    }
+  });
+}
+
+// Wait for Google Maps to load
+window.addEventListener('load', () => {
+  if (typeof google !== 'undefined' && google.maps) {
+    calculateCommute();
+  } else {
+    setTimeout(() => {
+      if (typeof google !== 'undefined' && google.maps) {
+        calculateCommute();
+      }
+    }, 1000);
+  }
+});
+{% endif %}
+
+{# Load Google Maps API #}
+{% if google_maps_api_key %}
+<script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places" async defer></script>
+{% endif %}
 </script>
 {% endblock %}

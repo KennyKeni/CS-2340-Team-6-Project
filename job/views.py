@@ -38,6 +38,7 @@ def job_listings(request):
         'jobs': jobs,
         'applied_job_ids': applied_job_ids,
         'job_types': JobPosting._meta.get_field('job_type').choices,
+        'google_maps_api_key': settings.GOOGLE_MAPS_API_KEY,
     }
     return render(request, 'job/job_listings.html', context)
 
@@ -50,7 +51,11 @@ def job_detail(request, job_id):
         and is_applicant(request.user)
         and Application.objects.filter(job=job, applicant=request.user).exists()
     )
-    return render(request, 'job/job_detail.html', {'job': job, 'has_applied': has_applied})
+    return render(request, 'job/job_detail.html', {
+        'job': job,
+        'has_applied': has_applied,
+        'google_maps_api_key': settings.GOOGLE_MAPS_API_KEY,
+    })
 
 
 @login_required

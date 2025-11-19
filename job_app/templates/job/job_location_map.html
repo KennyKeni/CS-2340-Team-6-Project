@@ -1,0 +1,265 @@
+{# job_location_map.html - Reusable Google Maps component for job locations #}
+{# 
+  Parameters:
+  - job: JobPosting instance with latitude/longitude
+  - interactive: Boolean - if True, map is draggable with address update capability
+  - google_maps_api_key: API key for Google Maps
+  - map_id: Unique ID for this map instance (default: 'jobLocationMap')
+  - height: Map height (default: '400px')
+  - show_directions: Boolean - if True, show "Get Directions" link (default: False)
+#}
+
+{% load static %}
+
+<div class="job-location-map-container mb-4">
+  <div id="{{ map_id|default:'jobLocationMap' }}" style="height: {{ height|default:'400px' }}; width: 100%; border-radius: 8px; border: 1px solid #dee2e6;"></div>
+  
+  {% if show_directions and job.latitude and job.longitude %}
+  <div class="mt-2 text-center">
+    <a href="https://www.google.com/maps/dir/?api=1&destination={{ job.latitude }},{{ job.longitude }}" 
+       target="_blank" 
+       class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-signpost-2"></i> Get Directions
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+  (function() {
+    const mapId = '{{ map_id|default:"jobLocationMap" }}';
+    const interactive = {{ interactive|default:False|yesno:"true,false" }};
+    const latitude = {{ job.latitude|default:"null" }};
+    const longitude = {{ job.longitude|default:"null" }};
+    
+    let map;
+    let marker;
+    let geocoder;
+    
+    function initMap() {
+      const mapElement = document.getElementById(mapId);
+      if (!mapElement) {
+        console.error('Map element not found:', mapId);
+        return;
+      }
+      
+      // Default location (center of US) if no coordinates
+      const defaultLocation = { lat: 39.8283, lng: -98.5795 };
+      const location = (latitude && longitude) 
+        ? { lat: latitude, lng: longitude }
+        : defaultLocation;
+      
+      // Initialize map
+      map = new google.maps.Map(mapElement, {
+        center: location,
+        zoom: (latitude && longitude) ? 15 : 4,
+        mapTypeControl: true,
+        streetViewControl: false,
+        fullscreenControl: true,
+      });
+      
+      // Initialize geocoder for reverse geocoding
+      if (interactive) {
+        geocoder = new google.maps.Geocoder();
+      }
+      
+      // Add marker if we have coordinates
+      if (latitude && longitude) {
+        marker = new google.maps.Marker({
+          position: location,
+          map: map,
+          title: '{{ job.title|escapejs }}',
+          draggable: interactive,
+        });
+        
+        // Info window with job details
+        const infoWindow = new google.maps.InfoWindow({
+          content: `
+            <div style="padding: 8px;">
+              <h6 style="margin: 0 0 4px 0; font-weight: 600;">{{ job.title|escapejs }}</h6>
+              <p style="margin: 0; color: #666; font-size: 0.9em;">
+                <i class="bi bi-building"></i> {{ job.company|escapejs }}<br>
+                <i class="bi bi-geo-alt"></i> {{ job.street_address|escapejs }}, {{ job.city|escapejs }}, {{ job.state|escapejs }} {{ job.zip_code|escapejs }}
+              </p>
+            </div>
+          `
+        });
+        
+        marker.addListener('click', () => {
+          infoWindow.open(map, marker);
+        });
+        
+        // Handle dragging in interactive mode
+        if (interactive) {
+          marker.addListener('dragend', (event) => {
+            const newLat = event.latLng.lat();
+            const newLng = event.latLng.lng();
+            
+            // Update hidden form fields if they exist
+            const latField = document.getElementById('id_latitude');
+            const lngField = document.getElementById('id_longitude');
+            
+            if (latField) latField.value = newLat;
+            if (lngField) lngField.value = newLng;
+            
+            // Reverse geocode to get address
+            reverseGeocode(newLat, newLng);
+          });
+        }
+      }
+    }
+    
+    // Reverse geocode coordinates to address
+    function reverseGeocode(lat, lng) {
+      if (!geocoder) return;
+      
+      geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+        if (status === 'OK' && results[0]) {
+          const addressComponents = results[0].address_components;
+          
+          // Extract address parts
+          let streetNumber = '';
+          let route = '';
+          let city = '';
+          let state = '';
+          let zipCode = '';
+          let country = '';
+          
+          addressComponents.forEach(component => {
+            const types = component.types;
+            if (types.includes('street_number')) {
+              streetNumber = component.long_name;
+            } else if (types.includes('route')) {
+              route = component.long_name;
+            } else if (types.includes('locality')) {
+              city = component.long_name;
+            } else if (types.includes('administrative_area_level_1')) {
+              state = component.short_name;
+            } else if (types.includes('postal_code')) {
+              zipCode = component.long_name;
+            } else if (types.includes('country')) {
+              country = component.long_name;
+            }
+          });
+          
+          // Update form fields if they exist
+          const streetField = document.getElementById('id_street_address');
+          const cityField = document.getElementById('id_city');
+          const stateField = document.getElementById('id_state');
+          const zipField = document.getElementById('id_zip_code');
+          const countryField = document.getElementById('id_country');
+          
+          if (streetField && (streetNumber || route)) {
+            streetField.value = `${streetNumber} ${route}`.trim();
+          }
+          if (cityField && city) cityField.value = city;
+          if (stateField && state) stateField.value = state;
+          if (zipField && zipCode) zipField.value = zipCode;
+          if (countryField && country) countryField.value = country;
+          
+          console.log('Address updated from map:', results[0].formatted_address);
+        }
+      });
+    }
+    
+    // Auto-geocode from address fields (for interactive mode)
+    function geocodeFromAddress() {
+      if (!interactive || !geocoder) return;
+      
+      const streetField = document.getElementById('id_street_address');
+      const cityField = document.getElementById('id_city');
+      const stateField = document.getElementById('id_state');
+      const zipField = document.getElementById('id_zip_code');
+      const countryField = document.getElementById('id_country');
+      
+      if (!streetField || !cityField || !stateField) return;
+      
+      const addressParts = [
+        streetField.value,
+        cityField.value,
+        stateField.value,
+        zipField?.value || '',
+        countryField?.value || 'USA'
+      ].filter(part => part.trim());
+      
+      if (addressParts.length < 3) return; // Need at least street, city, state
+      
+      const address = addressParts.join(', ');
+      
+      geocoder.geocode({ address }, (results, status) => {
+        if (status === 'OK' && results[0]) {
+          const location = results[0].geometry.location;
+          const lat = location.lat();
+          const lng = location.lng();
+          
+          // Update map and marker
+          map.setCenter(location);
+          map.setZoom(15);
+          
+          if (marker) {
+            marker.setPosition(location);
+          } else {
+            marker = new google.maps.Marker({
+              position: location,
+              map: map,
+              title: '{{ job.title|escapejs }}',
+              draggable: true,
+            });
+            
+            marker.addListener('dragend', (event) => {
+              const newLat = event.latLng.lat();
+              const newLng = event.latLng.lng();
+              
+              const latField = document.getElementById('id_latitude');
+              const lngField = document.getElementById('id_longitude');
+              
+              if (latField) latField.value = newLat;
+              if (lngField) lngField.value = newLng;
+              
+              reverseGeocode(newLat, newLng);
+            });
+          }
+          
+          // Update hidden lat/lng fields
+          const latField = document.getElementById('id_latitude');
+          const lngField = document.getElementById('id_longitude');
+          
+          if (latField) latField.value = lat;
+          if (lngField) lngField.value = lng;
+          
+          console.log('Geocoded address to:', lat, lng);
+        }
+      });
+    }
+    
+    // In interactive mode, add listeners to address fields
+    if (interactive) {
+      window.addEventListener('load', () => {
+        const addressFields = ['id_street_address', 'id_city', 'id_state', 'id_zip_code', 'id_country'];
+        
+        addressFields.forEach(fieldId => {
+          const field = document.getElementById(fieldId);
+          if (field) {
+            field.addEventListener('blur', geocodeFromAddress);
+          }
+        });
+      });
+    }
+    
+    // Initialize map when Google Maps API is ready
+    if (window.google && window.google.maps) {
+      initMap();
+    } else {
+      window.addEventListener('load', initMap);
+    }
+    
+    // Make initMap globally accessible for API callback
+    window['initMap_' + mapId] = initMap;
+  })();
+</script>
+
+{% if not google_maps_api_key %}
+<div class="alert alert-warning mt-2">
+  <i class="bi bi-exclamation-triangle"></i> Google Maps API key not configured. Map functionality is disabled.
+</div>
+{% endif %}

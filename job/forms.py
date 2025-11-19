@@ -33,7 +33,7 @@ class JobPostingForm(forms.ModelForm):
         model = JobPosting
         fields = [
             "title", "company", "street_address", "city", "state",
-            "zip_code", "country", "job_type", "description",
+            "zip_code", "country", "latitude", "longitude", "job_type", "description",
             "requirements", "benefits", "salary_min", "salary_max",
             "salary_currency", "application_deadline",
         ]
@@ -45,6 +45,8 @@ class JobPostingForm(forms.ModelForm):
             "state": forms.TextInput(attrs={"class": "form-control", "placeholder": "State/Province"}),
             "zip_code": forms.TextInput(attrs={"class": "form-control", "placeholder": "ZIP/Postal Code"}),
             "country": forms.TextInput(attrs={"class": "form-control", "placeholder": "Country"}),
+            "latitude": forms.HiddenInput(),
+            "longitude": forms.HiddenInput(),
             "job_type": forms.Select(attrs={"class": "form-control"}),
             "description": forms.Textarea(attrs={"class": "form-control", "rows": 4, "placeholder": "Job description and summary"}),
             "requirements": forms.Textarea(attrs={"class": "form-control", "rows": 4, "placeholder": "Job requirements"}),

@@ -120,6 +120,7 @@ def my_job_postings(request):
         "open_modal": False,
         "modal_title": "Create Job Posting",
         "form_action": "recruiter:job_create",
+        "google_maps_api_key": settings.GOOGLE_MAPS_API_KEY,
     }
     return render(request, "recruiter/myjobpostings.html", context)
 
@@ -141,6 +142,7 @@ def job_create(request):
                 "open_modal": True,                 # modal visible
                 "modal_title": "Create Job Posting",
                 "form_action": "recruiter:job_create",
+                "google_maps_api_key": settings.GOOGLE_MAPS_API_KEY,
             },
         )
 
@@ -179,6 +181,7 @@ def job_create(request):
             "open_modal": True,
             "modal_title": "Create Job Posting",
             "form_action": "recruiter:job_create",
+            "google_maps_api_key": settings.GOOGLE_MAPS_API_KEY,
         },
         status=400,
     )
@@ -204,6 +207,7 @@ def job_update(request, pk: int):
                 "modal_title": "Edit Job Posting",
                 "form_action": "recruiter:job_update",  # will pass pk in template
                 "edit_pk": job.pk,
+                "google_maps_api_key": settings.GOOGLE_MAPS_API_KEY,
             },
         )
 
@@ -242,6 +246,7 @@ def job_update(request, pk: int):
             "modal_title": "Edit Job Posting",
             "form_action": "recruiter:job_update",
             "edit_pk": job.pk,
+            "google_maps_api_key": settings.GOOGLE_MAPS_API_KEY,
         },
         status=400,
     )
