@@ -18,23 +18,36 @@
   (function() {
     const mapId = '{{ map_id|default:"jobLocationMap" }}';
     const interactive = {{ interactive|default:False|yesno:"true,false" }};
-    const latitude = {{ job.latitude|default:"null" }};
-    const longitude = {{ job.longitude|default:"null" }};
-    
+    let latitude = {{ job.latitude|default:"null" }};
+    let longitude = {{ job.longitude|default:"null" }};
+
     let map;
     let marker;
     let geocoder;
-    
+
     function initMap_{{ map_id|default:"jobLocationMap" }}() {
       const mapElement = document.getElementById(mapId);
       if (!mapElement) {
         console.error('Map element not found:', mapId);
         return;
       }
-      
+
+      // If no coordinates from job instance, try reading from form fields (for new jobs with initial data)
+      if (!latitude || !longitude) {
+        const latField = document.getElementById('id_latitude');
+        const lngField = document.getElementById('id_longitude');
+
+        if (latField && latField.value) {
+          latitude = parseFloat(latField.value);
+        }
+        if (lngField && lngField.value) {
+          longitude = parseFloat(lngField.value);
+        }
+      }
+
       // Default location (Atlanta, GA) if no coordinates
       const defaultLocation = { lat: 33.7490, lng: -84.3880 };
-      const location = (latitude && longitude) 
+      const location = (latitude && longitude)
         ? { lat: latitude, lng: longitude }
         : defaultLocation;
       

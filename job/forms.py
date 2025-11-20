@@ -57,12 +57,32 @@ class JobPostingForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        recruiter_user = kwargs.pop('recruiter_user', None)
         super().__init__(*args, **kwargs)
+
         # Nice default in the input (still overridable by user)
         if not self.initial.get("salary_currency"):
             self.fields["salary_currency"].initial = "USD"
         if not self.initial.get("country"):
             self.fields["country"].initial = "USA"
+
+        # Pre-populate address fields from recruiter's account when creating new job
+        if recruiter_user and not self.instance.pk:
+            if recruiter_user.street_address:
+                self.fields["street_address"].initial = recruiter_user.street_address
+            if recruiter_user.city:
+                self.fields["city"].initial = recruiter_user.city
+            if recruiter_user.state:
+                self.fields["state"].initial = recruiter_user.state
+            if recruiter_user.zip_code:
+                self.fields["zip_code"].initial = recruiter_user.zip_code
+            if recruiter_user.country:
+                self.fields["country"].initial = recruiter_user.country
+            if recruiter_user.latitude:
+                self.fields["latitude"].initial = recruiter_user.latitude
+            if recruiter_user.longitude:
+                self.fields["longitude"].initial = recruiter_user.longitude
+
         # These are optional at the model level; keep the form consistent
         for name in ["requirements", "benefits", "salary_min", "salary_max", "application_deadline"]:
             self.fields[name].required = False

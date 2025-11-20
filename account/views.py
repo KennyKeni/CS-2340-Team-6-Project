@@ -20,6 +20,7 @@ from applicant.models import Applicant, Education, Link, Skill, WorkExperience
 from applicant.utils import is_applicant
 from recruiter.models import Recruiter
 from recruiter.utils import is_recruiter
+from job.utils import geocode_address
 
 
 # Helper method for anyone that needs it
@@ -47,7 +48,22 @@ def account_signup(request):
         if form.is_valid():
             try:
                 with transaction.atomic():
-                    user = form.save()
+                    user = form.save(commit=False)
+
+                    # Geocode user's address to get latitude/longitude
+                    if user.street_address and user.city and user.state:
+                        latitude, longitude = geocode_address(
+                            street_address=user.street_address,
+                            city=user.city,
+                            state=user.state,
+                            zip_code=user.zip_code,
+                            country=user.country
+                        )
+                        if latitude and longitude:
+                            user.latitude = latitude
+                            user.longitude = longitude
+
+                    user.save()
                     user_type = data.get("user_type")
 
                     if user_type == "applicant":

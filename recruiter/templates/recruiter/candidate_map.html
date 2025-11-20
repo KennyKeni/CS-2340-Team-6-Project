@@ -278,7 +278,7 @@
     });
   }
 
-  // Parse candidates JSON from Django
+  // Parse candidates JSON from Django BEFORE map initialization
   try {
     candidates = {{ candidates_json|safe }};
     console.log('Loaded ' + candidates.length + ' candidates:', candidates);
@@ -286,6 +286,9 @@
     console.error('Error parsing candidates:', e);
     candidates = [];
   }
+
+  // Store reference to initMap for Google Maps callback
+  window.initMap = initMap;
 </script>
 
 <!-- Load Google Maps API -->
