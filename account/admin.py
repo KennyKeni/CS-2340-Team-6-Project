@@ -2,9 +2,28 @@ from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
+from utils.export import export_users_csv
+
 from .admin_utils import change_user_role, get_user_role, ban_users, unban_users
 
 User = get_user_model()
+
+
+@admin.action(description="Export all selected users to CSV")
+def export_users_as_csv(modeladmin, request, queryset):
+    return export_users_csv(queryset, role_filter='all')
+
+
+@admin.action(description="Export selected users (Applicants only) to CSV")
+def export_applicants_as_csv(modeladmin, request, queryset):
+    applicants = queryset.filter(applicant__isnull=False)
+    return export_users_csv(applicants, role_filter='applicant')
+
+
+@admin.action(description="Export selected users (Recruiters only) to CSV")
+def export_recruiters_as_csv(modeladmin, request, queryset):
+    recruiters = queryset.filter(recruiter__isnull=False)
+    return export_users_csv(recruiters, role_filter='recruiter')
 
 
 @admin.register(User)
@@ -14,7 +33,15 @@ class UserAdmin(BaseUserAdmin):
     search_fields = ['username', 'email', 'first_name', 'last_name']
     ordering = ['-date_joined']
 
-    actions = ['change_to_applicant', 'change_to_recruiter', 'ban_selected_users', 'unban_selected_users']
+    actions = [
+        'export_users_as_csv',
+        'export_applicants_as_csv',
+        'export_recruiters_as_csv',
+        'change_to_applicant',
+        'change_to_recruiter',
+        'ban_selected_users',
+        'unban_selected_users',
+    ]
 
     def get_role(self, obj):
         role = get_user_role(obj)
