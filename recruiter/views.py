@@ -4,11 +4,13 @@ from django.core.mail import send_mail
 from django.core.paginator import Paginator
 from django.conf import settings
 from django.db.models import Q
+from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
+import json
 
 from .decorators import recruiter_required
 from .forms import MessageForm, SavedSearchForm, CandidateEmailForm
@@ -111,7 +113,7 @@ def recruiter_search(request):
 @recruiter_required
 def my_job_postings(request):
     postings = JobPosting.objects.filter(owner=request.user).order_by("-created_at")
-    form = JobPostingForm()
+    form = JobPostingForm(recruiter_user=request.user)
     context = {
         "template_data": {"title": "My Job Postings · DevJobs"},
         "postings": postings,
@@ -120,6 +122,7 @@ def my_job_postings(request):
         "open_modal": False,
         "modal_title": "Create Job Posting",
         "form_action": "recruiter:job_create",
+        "google_maps_api_key": settings.GOOGLE_MAPS_API_KEY,
     }
     return render(request, "recruiter/myjobpostings.html", context)
 
@@ -130,7 +133,7 @@ def job_create(request):
     """GET = show blank form in open modal. POST = create."""
     if request.method == "GET":
         postings = JobPosting.objects.filter(owner=request.user).order_by("-created_at")
-        form = JobPostingForm()
+        form = JobPostingForm(recruiter_user=request.user)
         return render(
             request,
             "recruiter/myjobpostings.html",
@@ -141,11 +144,12 @@ def job_create(request):
                 "open_modal": True,                 # modal visible
                 "modal_title": "Create Job Posting",
                 "form_action": "recruiter:job_create",
+                "google_maps_api_key": settings.GOOGLE_MAPS_API_KEY,
             },
         )
 
     # POST
-    form = JobPostingForm(request.POST)
+    form = JobPostingForm(request.POST, recruiter_user=request.user)
     if form.is_valid():
         job = form.save(commit=False)
         job.owner = request.user
@@ -179,6 +183,7 @@ def job_create(request):
             "open_modal": True,
             "modal_title": "Create Job Posting",
             "form_action": "recruiter:job_create",
+            "google_maps_api_key": settings.GOOGLE_MAPS_API_KEY,
         },
         status=400,
     )
@@ -204,6 +209,7 @@ def job_update(request, pk: int):
                 "modal_title": "Edit Job Posting",
                 "form_action": "recruiter:job_update",  # will pass pk in template
                 "edit_pk": job.pk,
+                "google_maps_api_key": settings.GOOGLE_MAPS_API_KEY,
             },
         )
 
@@ -242,6 +248,7 @@ def job_update(request, pk: int):
             "modal_title": "Edit Job Posting",
             "form_action": "recruiter:job_update",
             "edit_pk": job.pk,
+            "google_maps_api_key": settings.GOOGLE_MAPS_API_KEY,
         },
         status=400,
     )
@@ -750,3 +757,93 @@ def candidate_map(request):
     }
 
     return render(request, 'recruiter/candidate_map.html', context)
+
+
+@recruiter_required
+@require_http_methods(["GET", "POST"])
+def profile(request):
+    """View and edit recruiter profile."""
+    recruiter = request.user.recruiter
+
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+        try:
+            with transaction.atomic():
+                user = request.user
+
+                # Update Account fields
+                user.first_name = data.get("first_name", user.first_name)
+                user.last_name = data.get("last_name", user.last_name)
+                user.email = data.get("email", user.email)
+                user.phone_number = data.get("phone_number", user.phone_number)
+                user.street_address = data.get("street_address", user.street_address)
+                user.city = data.get("city", user.city)
+                user.state = data.get("state", user.state)
+                user.zip_code = data.get("zip_code", user.zip_code)
+                user.country = data.get("country", user.country)
+
+                # Geocode address if it changed
+                if user.street_address and user.city and user.state:
+                    latitude = data.get("latitude")
+                    longitude = data.get("longitude")
+
+                    # Use provided coordinates or geocode
+                    if latitude and longitude:
+                        user.latitude = float(latitude)
+                        user.longitude = float(longitude)
+                    else:
+                        lat, lng = geocode_address(
+                            street_address=user.street_address,
+                            city=user.city,
+                            state=user.state,
+                            zip_code=user.zip_code,
+                            country=user.country
+                        )
+                        if lat and lng:
+                            user.latitude = lat
+                            user.longitude = lng
+
+                user.save()
+
+                # Update Recruiter fields
+                recruiter.company = data.get("company", recruiter.company)
+                recruiter.position = data.get("position", recruiter.position)
+                recruiter.save()
+
+                return JsonResponse({
+                    "success": True,
+                    "message": "Profile updated successfully"
+                })
+
+        except Exception as e:
+            return JsonResponse({
+                "success": False,
+                "error": f"Error updating profile: {str(e)}"
+            }, status=500)
+
+    # GET request - show profile
+    # Create a fake job object for the map component to use the recruiter's location
+    class UserAsJob:
+        def __init__(self, user):
+            self.title = f"{user.first_name} {user.last_name}'s Location"
+            self.company = recruiter.company or "Your Company"
+            self.street_address = user.street_address or ""
+            self.city = user.city or ""
+            self.state = user.state or ""
+            self.zip_code = user.zip_code or ""
+            self.country = user.country or ""
+            self.latitude = user.latitude
+            self.longitude = user.longitude
+
+    context = {
+        "template_data": {"title": "My Profile · DevJobs"},
+        "recruiter": recruiter,
+        "user_as_job": UserAsJob(request.user),
+        "google_maps_api_key": settings.GOOGLE_MAPS_API_KEY,
+    }
+
+    return render(request, "recruiter/profile.html", context)

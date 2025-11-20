@@ -33,7 +33,7 @@ class JobPostingForm(forms.ModelForm):
         model = JobPosting
         fields = [
             "title", "company", "street_address", "city", "state",
-            "zip_code", "country", "job_type", "description",
+            "zip_code", "country", "latitude", "longitude", "job_type", "description",
             "requirements", "benefits", "salary_min", "salary_max",
             "salary_currency", "application_deadline",
         ]
@@ -45,6 +45,8 @@ class JobPostingForm(forms.ModelForm):
             "state": forms.TextInput(attrs={"class": "form-control", "placeholder": "State/Province"}),
             "zip_code": forms.TextInput(attrs={"class": "form-control", "placeholder": "ZIP/Postal Code"}),
             "country": forms.TextInput(attrs={"class": "form-control", "placeholder": "Country"}),
+            "latitude": forms.HiddenInput(),
+            "longitude": forms.HiddenInput(),
             "job_type": forms.Select(attrs={"class": "form-control"}),
             "description": forms.Textarea(attrs={"class": "form-control", "rows": 4, "placeholder": "Job description and summary"}),
             "requirements": forms.Textarea(attrs={"class": "form-control", "rows": 4, "placeholder": "Job requirements"}),
@@ -55,12 +57,32 @@ class JobPostingForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        recruiter_user = kwargs.pop('recruiter_user', None)
         super().__init__(*args, **kwargs)
+
         # Nice default in the input (still overridable by user)
         if not self.initial.get("salary_currency"):
             self.fields["salary_currency"].initial = "USD"
         if not self.initial.get("country"):
             self.fields["country"].initial = "USA"
+
+        # Pre-populate address fields from recruiter's account when creating new job
+        if recruiter_user and not self.instance.pk:
+            if recruiter_user.street_address:
+                self.fields["street_address"].initial = recruiter_user.street_address
+            if recruiter_user.city:
+                self.fields["city"].initial = recruiter_user.city
+            if recruiter_user.state:
+                self.fields["state"].initial = recruiter_user.state
+            if recruiter_user.zip_code:
+                self.fields["zip_code"].initial = recruiter_user.zip_code
+            if recruiter_user.country:
+                self.fields["country"].initial = recruiter_user.country
+            if recruiter_user.latitude:
+                self.fields["latitude"].initial = recruiter_user.latitude
+            if recruiter_user.longitude:
+                self.fields["longitude"].initial = recruiter_user.longitude
+
         # These are optional at the model level; keep the form consistent
         for name in ["requirements", "benefits", "salary_min", "salary_max", "application_deadline"]:
             self.fields[name].required = False

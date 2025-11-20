@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ template_data.title }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card shadow">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <div>
+            <h2 class="fw-bold text-primary mb-1">My Profile</h2>
+            <p class="text-muted mb-0">
+              Manage your recruiter profile information
+            </p>
+          </div>
+          <div>
+            <button
+              type="button"
+              class="btn btn-outline-primary me-2"
+              data-bs-toggle="modal"
+              data-bs-target="#editProfileModal"
+            >
+              <i class="bi bi-pencil"></i> Edit Profile
+            </button>
+            <a href="{% url 'account:logout' %}" class="btn btn-outline-danger">
+              <i class="bi bi-box-arrow-right"></i> Logout
+            </a>
+          </div>
+        </div>
+
+        <!-- Basic Information -->
+        <div class="mb-4">
+          <h5 class="fw-semibold mb-3">Basic Information</h5>
+          <div class="border rounded p-3">
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Name</label>
+                <p class="text-muted mb-0">{{ user.first_name }} {{ user.last_name }}</p>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Email</label>
+                <p class="text-muted mb-0">{{ user.email }}</p>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Username</label>
+                <p class="text-muted mb-0">{{ user.username }}</p>
+              </div>
+              {% if user.phone_number %}
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Phone Number</label>
+                <p class="text-muted mb-0">{{ user.phone_number }}</p>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Company Information -->
+        <div class="mb-4">
+          <h5 class="fw-semibold mb-3">Company Information</h5>
+          <div class="border rounded p-3">
+            {% if recruiter.company %}
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Company</label>
+              <p class="text-muted mb-0">{{ recruiter.company }}</p>
+            </div>
+            {% endif %}
+            {% if recruiter.position %}
+            <div class="mb-0">
+              <label class="form-label fw-semibold">Position</label>
+              <p class="text-muted mb-0">{{ recruiter.position }}</p>
+            </div>
+            {% endif %}
+            {% if not recruiter.company and not recruiter.position %}
+            <p class="text-muted mb-0">No company information added yet.</p>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Address Information -->
+        <div class="mb-4">
+          <h5 class="fw-semibold mb-3">Address</h5>
+          <div class="border rounded p-3">
+            {% if user.street_address or user.city %}
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Location</label>
+              <p class="text-muted mb-0">
+                {% if user.street_address %}{{ user.street_address }}<br>{% endif %}
+                {% if user.city %}{{ user.city }}{% endif %}{% if user.state %}, {{ user.state }}{% endif %} {% if user.zip_code %}{{ user.zip_code }}{% endif %}
+                {% if user.country %}<br>{{ user.country }}{% endif %}
+              </p>
+            </div>
+
+            {# Show map if coordinates exist #}
+            {% if user.latitude and user.longitude %}
+            <div class="mb-0">
+              <label class="form-label fw-semibold">Office Location</label>
+              {% include "recruiter/components/job_location_map.html" with job=user_as_job interactive=False height="300px" map_id="recruiterProfileMap" %}
+            </div>
+            {% endif %}
+            {% else %}
+            <p class="text-muted mb-0">No address information added yet.</p>
+            {% endif %}
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Profile Modal -->
+<div class="modal fade" id="editProfileModal" tabindex="-1" aria-labelledby="editProfileModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editProfileModalLabel">Edit Profile</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="post" id="profileForm">
+        {% csrf_token %}
+        <div class="modal-body">
+
+          <!-- Basic Information -->
+          <h6 class="fw-semibold mb-3">Basic Information</h6>
+
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label for="id_first_name" class="form-label">First Name</label>
+              <input type="text" class="form-control" id="id_first_name" name="first_name" value="{{ user.first_name }}" required>
+            </div>
+            <div class="col-md-6">
+              <label for="id_last_name" class="form-label">Last Name</label>
+              <input type="text" class="form-control" id="id_last_name" name="last_name" value="{{ user.last_name }}" required>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="id_email" class="form-label">Email</label>
+            <input type="email" class="form-control" id="id_email" name="email" value="{{ user.email }}" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="id_phone_number" class="form-label">Phone Number</label>
+            <input type="tel" class="form-control" id="id_phone_number" name="phone_number" value="{{ user.phone_number|default:'' }}" placeholder="(555) 123-4567">
+          </div>
+
+          <hr class="my-4">
+
+          <!-- Company Information -->
+          <h6 class="fw-semibold mb-3">Company Information</h6>
+
+          <div class="mb-3">
+            <label for="id_company" class="form-label">Company</label>
+            <input type="text" class="form-control" id="id_company" name="company" value="{{ recruiter.company|default:'' }}" placeholder="Your company name">
+          </div>
+
+          <div class="mb-3">
+            <label for="id_position" class="form-label">Your Position</label>
+            <input type="text" class="form-control" id="id_position" name="position" value="{{ recruiter.position|default:'' }}" placeholder="e.g. HR Manager, Talent Acquisition">
+          </div>
+
+          <hr class="my-4">
+
+          <!-- Address Information -->
+          <h6 class="fw-semibold mb-3">Address Information</h6>
+
+          <div class="mb-3">
+            <label for="id_street_address" class="form-label">Street Address</label>
+            <input type="text" class="form-control" id="id_street_address" name="street_address" value="{{ user.street_address|default:'' }}">
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="id_city" class="form-label">City</label>
+              <input type="text" class="form-control" id="id_city" name="city" value="{{ user.city|default:'' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="id_state" class="form-label">State</label>
+              <input type="text" class="form-control" id="id_state" name="state" value="{{ user.state|default:'' }}">
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="id_country" class="form-label">Country</label>
+              <input type="text" class="form-control" id="id_country" name="country" value="{{ user.country|default:'USA' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="id_zip_code" class="form-label">ZIP Code</label>
+              <input type="text" class="form-control" id="id_zip_code" name="zip_code" value="{{ user.zip_code|default:'' }}">
+            </div>
+          </div>
+
+          <input type="hidden" id="id_latitude" name="latitude" value="{{ user.latitude|default:'' }}">
+          <input type="hidden" id="id_longitude" name="longitude" value="{{ user.longitude|default:'' }}">
+
+          <!-- Interactive Map -->
+          <div class="mb-3">
+            <label class="form-label">Your Location on Map</label>
+            <p class="text-muted small mb-2">
+              <i class="bi bi-info-circle"></i>
+              The map will auto-update when you enter an address above. You can also drag the pin to adjust your exact location.
+            </p>
+            {% include "recruiter/components/job_location_map.html" with job=user_as_job interactive=True height="350px" map_id="editProfileMap" %}
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.getElementById('profileForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+
+  const formData = new FormData(this);
+  const data = Object.fromEntries(formData.entries());
+
+  try {
+    const response = await fetch('{% url "recruiter:profile" %}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+      },
+      body: JSON.stringify(data)
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      window.location.reload();
+    } else {
+      alert('Error updating profile: ' + (result.error || 'Unknown error'));
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    alert('An error occurred while updating your profile.');
+  }
+});
+</script>
+
+{% endblock %}
+
+{% block extra_js %}
+{# Load Google Maps API #}
+{% if google_maps_api_key %}
+<script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places" async defer></script>
+{% endif %}
+{% endblock %}
