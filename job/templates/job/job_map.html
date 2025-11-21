@@ -34,15 +34,23 @@
       <button id="savePrefsBtn" class="btn btn-success ms-2">💾 Save Preferences</button>
       {% endif %}
     </div>
-    <div>
-      <small class="text-muted me-2">Filter Mode:</small>
-      <div class="btn-group btn-group-sm" role="group">
-        <input type="radio" class="btn-check" name="filterMode" id="filterOr" value="or" checked>
-        <label class="btn btn-outline-secondary" for="filterOr">Either (OR)</label>
-        <input type="radio" class="btn-check" name="filterMode" id="filterAnd" value="and">
-        <label class="btn btn-outline-secondary" for="filterAnd">Both (AND)</label>
+    <div class="d-flex flex-column align-items-center">
+      <div class="mb-1">
+        <small class="text-muted me-2 fw-semibold">Filter Mode:</small>
+        <div class="btn-group btn-group-sm" role="group">
+          <input type="radio" class="btn-check" name="filterMode" id="filterOr" value="or" checked>
+          <label class="btn btn-outline-secondary" for="filterOr" title="Show jobs that match either the distance or time limit">
+            <i class="bi bi-union"></i> Either (OR)
+          </label>
+          <input type="radio" class="btn-check" name="filterMode" id="filterAnd" value="and">
+          <label class="btn btn-outline-secondary" for="filterAnd" title="Show only jobs that match both the distance and time limit">
+            <i class="bi bi-intersect"></i> Both (AND)
+          </label>
+        </div>
       </div>
-      <small class="text-muted ms-2" id="filterExplanation">Show jobs within distance OR time</small>
+      <div class="alert alert-info py-1 px-3 mb-0" role="alert" style="font-size: 0.85rem;">
+        <i class="bi bi-info-circle"></i> <span id="filterExplanation">Show jobs within <strong>distance OR commute time</strong> (most flexible)</span>
+      </div>
     </div>
   </div>
 
@@ -130,12 +138,12 @@
     });
 
     filterOr.addEventListener("change", () => {
-      filterExplanation.textContent = "Show jobs within distance OR time";
+      filterExplanation.innerHTML = 'Show jobs within <strong>distance OR commute time</strong> (most flexible)';
       filterJobs();
     });
 
     filterAnd.addEventListener("change", () => {
-      filterExplanation.textContent = "Show jobs within distance AND time";
+      filterExplanation.innerHTML = 'Show jobs within <strong>distance AND commute time</strong> (most restrictive)';
       filterJobs();
     });
 

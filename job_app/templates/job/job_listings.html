@@ -17,7 +17,10 @@
       <!-- Job Listings -->
       {% if jobs %}
         {% for job in jobs %}
-        <div class="card mb-3 job-card">
+        <div class="card mb-3 job-card" style="cursor: pointer; transition: box-shadow 0.2s;"
+             onmouseover="this.style.boxShadow='0 4px 8px rgba(0,0,0,0.1)'"
+             onmouseout="this.style.boxShadow=''"
+             onclick="window.location.href='{% url 'job:job_detail' job.id %}'">
           <div class="card-body">
             <div class="row">
               <div class="col-md-8">
@@ -69,30 +72,36 @@
               </div>
             {% endif %}
           </div>
-          <div class="col-md-4 text-end">
+          <div class="col-md-4 text-end d-flex flex-column justify-content-between">
             <div class="mb-2">
               <small class="text-muted">
                 <i class="bi bi-clock"></i> Posted {{ job.created_at|timesince }} ago
               </small>
             </div>
-            {% load applicant_utils %}
-            {% if user.is_authenticated and user|is_applicant %}
-              {% if job.id in applied_job_ids %}
-                <button class="btn btn-success btn-sm" disabled>
-                  <i class="bi bi-check-circle"></i> Applied
-                </button>
-              {% else %}
-                <button class="btn btn-primary btn-sm apply-btn" 
-                        data-job-id="{{ job.id }}" 
-                        data-job-title="{{ job.title }}">
-                  <i class="bi bi-send"></i> Apply Now
-                </button>
-              {% endif %}
-            {% else %}
-              <a href="{% url 'account:login' %}" class="btn btn-outline-primary btn-sm">
-                <i class="bi bi-box-arrow-in-right"></i> Login to Apply
+            <div>
+              <a href="{% url 'job:job_detail' job.id %}" class="btn btn-outline-primary btn-sm mb-2 d-block" onclick="event.stopPropagation()">
+                <i class="bi bi-eye"></i> View Details
               </a>
-            {% endif %}
+              {% load applicant_utils %}
+              {% if user.is_authenticated and user|is_applicant %}
+                {% if job.id in applied_job_ids %}
+                  <button class="btn btn-success btn-sm d-block w-100" disabled onclick="event.stopPropagation()">
+                    <i class="bi bi-check-circle"></i> Applied
+                  </button>
+                {% else %}
+                  <button class="btn btn-primary btn-sm apply-btn d-block w-100"
+                          data-job-id="{{ job.id }}"
+                          data-job-title="{{ job.title }}"
+                          onclick="event.stopPropagation()">
+                    <i class="bi bi-send"></i> Apply Now
+                  </button>
+                {% endif %}
+              {% else %}
+                <a href="{% url 'account:login' %}" class="btn btn-outline-primary btn-sm d-block" onclick="event.stopPropagation()">
+                  <i class="bi bi-box-arrow-in-right"></i> Login to Apply
+                </a>
+              {% endif %}
+            </div>
           </div>
         </div>
           </div>
