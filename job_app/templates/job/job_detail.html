@@ -72,7 +72,7 @@
           </div>
           {% endif %}
           
-          {% include "recruiter/components/job_location_map.html" with job=job interactive=False height="300px" map_id="jobDetailMap" %}
+          {% include "job/job_location_map.html" with job=job interactive=False height="300px" map_id="jobDetailMap" show_directions=False google_maps_api_key=google_maps_api_key %}
           
           <div class="mt-3 text-center">
             <a href="https://www.google.com/maps/dir/?api=1&destination={{ job.latitude }},{{ job.longitude }}" 
@@ -328,16 +328,28 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 });
+</script>
+
+{# Load Google Maps API before any map initialization #}
+{% if google_maps_api_key %}
+<script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places"></script>
+{% endif %}
 
 {# Calculate commute time for applicants #}
 {% load applicant_utils %}
 {% if user.is_authenticated and user|is_applicant and user.latitude and user.longitude and job.latitude and job.longitude %}
+<script>
 // Calculate commute time using Distance Matrix API
 function calculateCommute() {
+  if (typeof google === 'undefined' || !google.maps) {
+    console.warn('Google Maps not loaded yet');
+    return;
+  }
+
   const service = new google.maps.DistanceMatrixService();
   const origin = new google.maps.LatLng({{ user.latitude }}, {{ user.longitude }});
   const destination = new google.maps.LatLng({{ job.latitude }}, {{ job.longitude }});
-  
+
   service.getDistanceMatrix({
     origins: [origin],
     destinations: [destination],
@@ -348,7 +360,7 @@ function calculateCommute() {
       const element = response.rows[0].elements[0];
       const distance = element.distance.text;
       const duration = element.duration.text;
-      
+
       const commuteInfo = document.getElementById('commuteInfo');
       if (commuteInfo) {
         commuteInfo.innerHTML = `
@@ -373,14 +385,9 @@ window.addEventListener('load', () => {
       if (typeof google !== 'undefined' && google.maps) {
         calculateCommute();
       }
-    }, 1000);
+    }, 1500);
   }
 });
-{% endif %}
-
-{# Load Google Maps API #}
-{% if google_maps_api_key %}
-<script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places" async defer></script>
-{% endif %}
 </script>
+{% endif %}
 {% endblock %}

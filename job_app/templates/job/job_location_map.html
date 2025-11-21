@@ -1,13 +1,14 @@
-{# job_location_map.html - Reusable Google Maps component for job locations #}
-{# 
-  Parameters:
-  - job: JobPosting instance with latitude/longitude
-  - interactive: Boolean - if True, map is draggable with address update capability
-  - google_maps_api_key: API key for Google Maps
-  - map_id: Unique ID for this map instance (default: 'jobLocationMap')
-  - height: Map height (default: '400px')
-  - show_directions: Boolean - if True, show "Get Directions" link (default: False)
-#}
+{% comment %}
+job_location_map.html - Reusable Google Maps component for job locations
+
+Parameters:
+- job: JobPosting instance with latitude/longitude
+- interactive: Boolean - if True, map is draggable with address update capability
+- google_maps_api_key: API key for Google Maps
+- map_id: Unique ID for this map instance (default: 'jobLocationMap')
+- height: Map height (default: '400px')
+- show_directions: Boolean - if True, show "Get Directions" link (default: False)
+{% endcomment %}
 
 {% load static %}
 
@@ -247,12 +248,21 @@
     }
     
     // Initialize map when Google Maps API is ready
-    if (window.google && window.google.maps) {
-      initMap();
-    } else {
-      window.addEventListener('load', initMap);
+    function waitForGoogleMaps() {
+      if (window.google && window.google.maps) {
+        initMap();
+      } else {
+        setTimeout(waitForGoogleMaps, 100);
+      }
     }
-    
+
+    // Start checking for Google Maps
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', waitForGoogleMaps);
+    } else {
+      waitForGoogleMaps();
+    }
+
     // Make initMap globally accessible for API callback
     window['initMap_' + mapId] = initMap;
   })();

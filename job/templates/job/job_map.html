@@ -79,7 +79,7 @@
     // Load jobs from Django
     jobs = [
       {% for job in jobs %}
-        { title: "{{ job.title|escapejs }}", company: "{{ job.company|escapejs }}",
+        { id: "{{ job.id }}", title: "{{ job.title|escapejs }}", company: "{{ job.company|escapejs }}",
           lat: parseFloat("{{ job.latitude }}"), lng: parseFloat("{{ job.longitude }}") },
       {% endfor %}
     ];
@@ -91,7 +91,11 @@
         title: job.title,
       });
       const info = new google.maps.InfoWindow({
-        content: `<div><h6>${job.title}</h6><p>${job.company}</p></div>`
+        content: `<div style="padding: 8px;">
+          <h6 style="margin: 0 0 8px 0; font-weight: 600;">${job.title}</h6>
+          <p style="margin: 0 0 8px 0; color: #666;">${job.company}</p>
+          <a href="/jobs/${job.id}/" class="btn btn-sm btn-primary" style="text-decoration: none; color: white; padding: 4px 12px; border-radius: 4px; display: inline-block;">View Job</a>
+        </div>`
       });
       marker.addListener("click", () => info.open(map, marker));
       jobMarkers.push({ marker, job });
