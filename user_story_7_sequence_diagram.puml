@@ -1,0 +1,70 @@
+@startuml Job Map Sequence Diagram
+title User Story 7: Job Seeker Views Job Postings on Interactive Map
+
+actor "Job Seeker" as User
+participant "Browser" as Browser
+participant "job_map View" as View
+participant "JobPosting Model" as JobModel
+participant "Google Maps API" as MapsAPI
+participant "Distance Matrix API" as DistanceAPI
+database "Database" as DB
+
+== Initial Map Load ==
+User -> Browser: navigate("/jobs/map/")
+Browser -> View: GET /jobs/map/
+View -> JobModel: exclude(latitude__isnull=True, longitude__isnull=True)
+JobModel -> DB: SELECT * FROM job_posting WHERE latitude IS NOT NULL
+DB --> JobModel: jobs[]
+JobModel --> View: QuerySet<JobPosting>
+View --> Browser: render("job/job_map.html", context)
+Browser --> User: display()
+
+== User Location Detection ==
+Browser -> Browser: getUserLocation()
+Browser -> User: requestPermission()
+User --> Browser: grant()
+Browser -> Browser: getCurrentPosition()
+Browser --> Browser: {lat, lng}
+Browser -> MapsAPI: createMarker(position, icon)
+MapsAPI --> Browser: Marker
+Browser -> MapsAPI: drawCircle(center, radius)
+MapsAPI --> Browser: Circle
+
+== Display Job Markers ==
+Browser -> MapsAPI: createMarkers(jobs)
+MapsAPI --> Browser: Marker[]
+
+== User Adjusts Filters ==
+User -> Browser: setRadius(50)
+Browser -> MapsAPI: updateCommuteCircle(50)
+MapsAPI --> Browser: animateCircle()
+User -> Browser: setCommuteMode("DRIVING")
+User -> Browser: setCommuteTime(30)
+User -> Browser: clickApplyFilter()
+
+== Distance Calculation & Filtering ==
+Browser -> Browser: filterJobs()
+Browser -> DistanceAPI: calculateDistances(origins, destinations, mode)
+DistanceAPI --> Browser: DistanceMatrixResponse
+Browser -> Browser: applyFilter(results, radius, commuteTime)
+Browser -> MapsAPI: updateMarkerVisibility(filteredJobs)
+MapsAPI --> Browser: update()
+Browser --> User: displayFilteredMarkers()
+
+== View Job Details ==
+User -> Browser: click(marker)
+Browser -> Browser: onMarkerClick(marker)
+Browser -> MapsAPI: openInfoWindow(marker, content)
+MapsAPI --> Browser: InfoWindow
+Browser --> User: showJobDetails()
+
+== Save Preferences (Optional) ==
+User -> Browser: clickSavePreferences()
+Browser -> Browser: preparePreferences(radius, mode, time)
+Browser -> View: PATCH /account/profile/update/
+View -> DB: UPDATE account SET preferences WHERE id=user_id
+DB --> View: rowsAffected
+View --> Browser: {success: true}
+Browser --> User: showToast("Preferences saved")
+
+@enduml
