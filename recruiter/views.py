@@ -265,6 +265,60 @@ def job_delete(request, pk: int):
 
 
 @recruiter_required
+def job_detail(request, pk):
+    """View job details with candidate recommendations"""
+    # Get the job and verify ownership
+    job = get_object_or_404(JobPosting, pk=pk, owner=request.user)
+    
+    # Get candidate recommendations
+    recommendations = job.get_candidate_recommendations(min_matching_skills=1, include_applied=True)
+    
+    # Split into new candidates and applied candidates
+    new_candidates = [c for c in recommendations if not c.has_applied]
+    applied_candidates = [c for c in recommendations if c.has_applied]
+    
+    # Get applications count
+    from applicant.models import Application
+    applications_count = Application.objects.filter(job=job).count()
+    
+    # Get job skills grouped by importance
+    required_skills = job.required_skills.filter(importance_level='required')
+    preferred_skills = job.required_skills.filter(importance_level='preferred')
+    nice_to_have_skills = job.required_skills.filter(importance_level='nice_to_have')
+    
+    # Calculate maximum possible score for percentage calculation
+    # Required: 3 points each, Preferred: 2 points each, Nice-to-have: 1 point each
+    max_possible_score = (
+        required_skills.count() * 3 +
+        preferred_skills.count() * 2 +
+        nice_to_have_skills.count() * 1
+    )
+    
+    # Calculate match percentage for each candidate
+    for candidate in new_candidates + applied_candidates:
+        if max_possible_score > 0:
+            candidate.match_percentage = round((candidate.total_match_score / max_possible_score) * 100, 0)
+        else:
+            candidate.match_percentage = 0
+    
+    context = {
+        'job': job,
+        'new_candidates': new_candidates,
+        'applied_candidates': applied_candidates,
+        'applications_count': applications_count,
+        'required_skills': required_skills,
+        'preferred_skills': preferred_skills,
+        'nice_to_have_skills': nice_to_have_skills,
+        'max_possible_score': max_possible_score,
+        'template_data': {
+            'title': f'{job.title} - Candidate Recommendations · DevJobs'
+        }
+    }
+    
+    return render(request, 'recruiter/job_detail.html', context)
+
+
+@recruiter_required
 def candidate_search(request):
     """Search for candidates/applicants with filtering"""
     candidates = Applicant.objects.select_related('account', 'privacy_settings').prefetch_related(
