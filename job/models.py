@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Q
 from django.utils import timezone
 from account.models import Account
 
@@ -49,6 +50,100 @@ class JobPosting(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+
+    def get_candidate_recommendations(self, min_matching_skills=1, include_applied=True):
+        """
+        Get candidate recommendations based on matching skills.
+        
+        Args:
+            min_matching_skills (int): Minimum number of matching skills required
+            include_applied (bool): Whether to include candidates who have already applied
+        
+        Returns:
+            QuerySet: Applicant objects with annotations (total_match_score, has_applied, matching_skills)
+        """
+        from applicant.models import Applicant, Skill, ProfilePrivacySettings
+        from applicant.models import Application
+        
+        # Get all job skills for this job
+        job_skills = self.required_skills.all()
+        
+        if not job_skills.exists():
+            return Applicant.objects.none()
+        
+        # Get skill names by importance level
+        required_skill_names = list(job_skills.filter(importance_level='required').values_list('skill_name', flat=True))
+        preferred_skill_names = list(job_skills.filter(importance_level='preferred').values_list('skill_name', flat=True))
+        nice_to_have_skill_names = list(job_skills.filter(importance_level='nice_to_have').values_list('skill_name', flat=True))
+        
+        all_job_skill_names = required_skill_names + preferred_skill_names + nice_to_have_skill_names
+        
+        if not all_job_skill_names:
+            return Applicant.objects.none()
+        
+        # Start with applicants who have at least one matching skill and are visible to recruiters
+        applicants = Applicant.objects.filter(
+            Q(privacy_settings__visible_to_recruiters=True) | Q(privacy_settings__isnull=True),
+            skills__skill_name__in=all_job_skill_names
+        ).select_related('account', 'privacy_settings').prefetch_related('skills').distinct()
+        
+        # Calculate match score for each applicant
+        # We'll use annotations to calculate the weighted score
+        applicants_with_scores = []
+        
+        for applicant in applicants:
+            # Get applicant's skill names
+            applicant_skill_names = set(applicant.skills.values_list('skill_name', flat=True))
+            
+            # Calculate weighted score
+            match_score = 0
+            matching_skills = []
+            
+            # Count required skills (3 points each)
+            for skill_name in required_skill_names:
+                if skill_name in applicant_skill_names:
+                    match_score += 3
+                    matching_skills.append({'name': skill_name, 'level': 'required'})
+            
+            # Count preferred skills (2 points each)
+            for skill_name in preferred_skill_names:
+                if skill_name in applicant_skill_names:
+                    match_score += 2
+                    matching_skills.append({'name': skill_name, 'level': 'preferred'})
+            
+            # Count nice-to-have skills (1 point each)
+            for skill_name in nice_to_have_skill_names:
+                if skill_name in applicant_skill_names:
+                    match_score += 1
+                    matching_skills.append({'name': skill_name, 'level': 'nice_to_have'})
+            
+            # Check if minimum matching skills requirement is met
+            if len(matching_skills) < min_matching_skills:
+                continue
+            
+            # Check if applicant has already applied
+            has_applied = Application.objects.filter(
+                job=self,
+                applicant=applicant.account
+            ).exists()
+            
+            # Store the score and matching skills as attributes
+            applicant.total_match_score = match_score
+            applicant.has_applied = has_applied
+            applicant.matching_skills = matching_skills
+            
+            applicants_with_scores.append(applicant)
+        
+        # Filter out applied candidates if include_applied is False
+        if not include_applied:
+            applicants_with_scores = [a for a in applicants_with_scores if not a.has_applied]
+        
+        # Sort by match score DESC, then by account creation date
+        applicants_with_scores.sort(
+            key=lambda x: (-x.total_match_score, x.account.date_joined)
+        )
+        
+        return applicants_with_scores
 
     def __str__(self):
         return f"{self.title} ({self.owner.username})"
