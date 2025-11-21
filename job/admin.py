@@ -1,5 +1,13 @@
 from django.contrib import admin
+
+from utils.export import export_job_postings_csv
+
 from .models import JobPosting, JobApplication, JobSkill
+
+
+@admin.action(description="Export selected job postings to CSV")
+def export_job_postings_as_csv(modeladmin, request, queryset):
+    return export_job_postings_csv(queryset)
 
 
 class JobSkillInline(admin.TabularInline):
@@ -14,6 +22,7 @@ class JobPostingAdmin(admin.ModelAdmin):
     search_fields = ('title', 'company', 'location', 'owner__username')
     readonly_fields = ('created_at', 'updated_at')
     inlines = [JobSkillInline]
+    actions = [export_job_postings_as_csv]
 
 
 @admin.register(JobSkill)

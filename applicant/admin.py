@@ -1,5 +1,13 @@
 from django.contrib import admin
+
+from utils.export import export_applications_csv
+
 from .models import Application, Applicant, WorkExperience, Education, Skill, Link, ProfilePrivacySettings
+
+
+@admin.action(description="Export selected applications to CSV")
+def export_applications_as_csv(modeladmin, request, queryset):
+    return export_applications_csv(queryset)
 
 
 @admin.register(ProfilePrivacySettings)
@@ -44,3 +52,4 @@ class ApplicationAdmin(admin.ModelAdmin):
     list_display = ("job", "applicant", "status", "updated_at")
     list_filter = ("status", "updated_at")
     search_fields = ("job__title", "applicant__username")
+    actions = [export_applications_as_csv]
