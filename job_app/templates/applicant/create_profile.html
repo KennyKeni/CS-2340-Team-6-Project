@@ -48,6 +48,77 @@
             </div>
           </div>
 
+          <!-- Location Information -->
+          <div class="mb-4">
+            <h5 class="fw-semibold mb-3">Location Information</h5>
+
+            <div class="mb-3">
+              <label for="street_address" class="form-label">Street Address</label>
+              <input
+                type="text"
+                class="form-control"
+                id="street_address"
+                name="street_address"
+                value="{{ user.street_address }}"
+                placeholder="123 Main St"
+              >
+            </div>
+
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label for="city" class="form-label">City <span class="text-danger">*</span></label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="city"
+                  name="city"
+                  value="{{ user.city }}"
+                  placeholder="Atlanta"
+                  required
+                >
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="state" class="form-label">State <span class="text-danger">*</span></label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="state"
+                  name="state"
+                  value="{{ user.state }}"
+                  placeholder="Georgia"
+                  required
+                >
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label for="country" class="form-label">Country <span class="text-danger">*</span></label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="country"
+                  name="country"
+                  value="{{ user.country }}"
+                  placeholder="United States"
+                  required
+                >
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="zip_code" class="form-label">Zip Code <span class="text-danger">*</span></label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="zip_code"
+                  name="zip_code"
+                  value="{{ user.zip_code }}"
+                  placeholder="30332"
+                  required
+                >
+              </div>
+            </div>
+          </div>
+
           <!-- Commute Preferences -->
           <div class="mb-4">
             <h5 class="fw-semibold mb-3">Commute Preferences</h5>

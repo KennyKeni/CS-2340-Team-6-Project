@@ -38,7 +38,7 @@
             <p class="text-muted">{{ template_data.applicant.headline }}</p>
           </div>
           {% endif %}
-          
+
           {% if template_data.applicant.resume %}
           <div class="mb-3">
             <label class="form-label fw-semibold">Resume</label>
@@ -52,6 +52,20 @@
             </p>
           </div>
           {% endif %}
+        </div>
+
+        <!-- Location Information -->
+        <div class="mb-4">
+          <h5 class="fw-semibold mb-3">Location</h5>
+          <div class="border rounded p-3">
+            {% if user.street_address %}
+            <p class="mb-2"><strong>Street Address:</strong> {{ user.street_address }}</p>
+            {% endif %}
+            <p class="mb-2"><strong>City:</strong> {{ user.city }}</p>
+            <p class="mb-2"><strong>State:</strong> {{ user.state }}</p>
+            <p class="mb-2"><strong>Country:</strong> {{ user.country }}</p>
+            <p class="mb-0"><strong>Zip Code:</strong> {{ user.zip_code }}</p>
+          </div>
         </div>
 
         <!-- 🚗 Commute Preferences -->

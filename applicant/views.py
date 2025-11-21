@@ -380,6 +380,13 @@ def create_profile(request):
             applicant.resume = data.get('resume', '')
             applicant.save()
 
+            # Update location fields on Account model
+            user.street_address = data.get('street_address', '').strip()
+            user.city = data.get('city', '').strip()
+            user.state = data.get('state', '').strip()
+            user.country = data.get('country', '').strip()
+            user.zip_code = data.get('zip_code', '').strip()
+
             # Update commute preferences on Account model
             commute_radius_value = data.get('preferred_commute_radius', '').strip()
             if commute_radius_value:
