@@ -153,7 +153,7 @@ def export_job_postings_csv(queryset):
         "required_skills",
         "job_applications",
         "applications",
-    )
+    ).order_by("-created_at")
 
     filename = _timestamped_filename("job_postings_export")
     response = _create_csv_response(filename)
@@ -271,7 +271,7 @@ def export_applications_csv(queryset):
     ).prefetch_related(
         "job__required_skills",
         "applicant__applicant__skills",
-    )
+    ).order_by("-created_at")
 
     filename = _timestamped_filename("applications_export")
     response = _create_csv_response(filename)
@@ -390,7 +390,7 @@ def export_users_csv(queryset, role_filter: Optional[str] = None):
         "applicant__skills",
         "applicant__education",
         "applicant__privacy_settings",
-    )
+    ).order_by("-date_joined")
 
     role_scope = role_filter or "all"
     filename = _timestamped_filename(f"users_export_{role_scope}")

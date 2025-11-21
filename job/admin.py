@@ -22,7 +22,7 @@ class JobPostingAdmin(admin.ModelAdmin):
     search_fields = ('title', 'company', 'location', 'owner__username')
     readonly_fields = ('created_at', 'updated_at')
     inlines = [JobSkillInline]
-    actions = ['export_job_postings_as_csv']
+    actions = [export_job_postings_as_csv]
 
 
 @admin.register(JobSkill)

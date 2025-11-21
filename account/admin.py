@@ -34,9 +34,9 @@ class UserAdmin(BaseUserAdmin):
     ordering = ['-date_joined']
 
     actions = [
-        'export_users_as_csv',
-        'export_applicants_as_csv',
-        'export_recruiters_as_csv',
+        export_users_as_csv,
+        export_applicants_as_csv,
+        export_recruiters_as_csv,
         'change_to_applicant',
         'change_to_recruiter',
         'ban_selected_users',
